@@ -16,10 +16,16 @@ import type { AuthFormState } from "./auth-form";
 
 const RATE_LIMITED = "Too many attempts. Wait a few minutes, then try again.";
 
-function isRateLimit(code: string | undefined) {
-  return (
-    code === "over_request_rate_limit" || code === "over_email_send_rate_limit"
-  );
+// Supabase caps how many emails a project may send per hour, and the cap is
+// low until the project has its own SMTP provider. The wording is the same
+// whether or not the address has an account, so it reveals nothing.
+const EMAIL_LIMIT =
+  "We cannot send another email right now. If you signed up earlier, open the link in the email we already sent. Otherwise try again in about an hour.";
+
+function rateLimitMessage(code: string | undefined) {
+  if (code === "over_email_send_rate_limit") return EMAIL_LIMIT;
+  if (code === "over_request_rate_limit") return RATE_LIMITED;
+  return null;
 }
 
 /** The email as typed, so the form can show it again after an error. */
@@ -77,8 +83,9 @@ export async function signUp(
         email,
       };
     }
-    if (isRateLimit(error.code)) {
-      return { status: "error", message: RATE_LIMITED, email };
+    const limited = rateLimitMessage(error.code);
+    if (limited) {
+      return { status: "error", message: limited, email };
     }
     // Do not say whether the address already has an account: that would let
     // anyone test which emails are registered.
@@ -130,8 +137,9 @@ export async function signIn(
         email,
       };
     }
-    if (isRateLimit(error.code)) {
-      return { status: "error", message: RATE_LIMITED, email };
+    const limited = rateLimitMessage(error.code);
+    if (limited) {
+      return { status: "error", message: limited, email };
     }
     if (error.code !== "invalid_credentials") {
       console.error("signIn failed:", error.code ?? error.name);

@@ -57,6 +57,8 @@ Supabase dashboard settings these routes rely on (Authentication → URL Configu
 
 With Supabase's default email template, the confirmation link signs the member in only in the browser where they signed up; opened elsewhere it still confirms the email, and they sign in normally. To make the link work on any device, change the "Confirm signup" template link to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`.
 
+Supabase's built-in email service is for development only: it sends very few emails per hour (see Authentication → Rate Limits) and, per Supabase's documentation, delivers only to members of the project's organization. Once that hourly limit is reached, sign-up shows "We cannot send another email right now". Before anyone outside the team signs up, connect an SMTP provider under Authentication → Emails → SMTP Settings.
+
 Not built yet: password reset, and resending the confirmation email.
 
 ## Security model
