@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #14201a;
+  --surface: #f5f8f6;
+  --border: #d5e0d9;
+  --muted: #4a5a51;
+  --brand: #0f5132;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b120e;
+    --foreground: #e8f0eb;
+    --surface: #131d17;
+    --border: #25352c;
+    --muted: #a9b9b0;
+    --brand: #6fcf97;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  /* System fonts: no font download, which matters on slow mobile data. */
+  --font-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue",
+    Arial, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+}

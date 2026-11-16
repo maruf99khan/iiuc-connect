@@ -1,0 +1,64 @@
+IIUC Connect — pgTAP run: supabase/tests/001_identity_rls.test.sql
+Date: 2026-11-16
+Database: Supabase project iiuc-connect (zhogqnudiosaqihzvkiq), PostgreSQL 17, region ap-southeast-1
+Migration under test: 20261116104143_identity_schema
+Method: file executed as one transaction and rolled back.
+Result: 46 of 46 passed.
+
+1..46
+ok 1 - every table in public has RLS enabled
+ok 2 - unconfirmed signup gets a profile with status unverified
+ok 3 - unconfirmed signup has no verification events
+ok 4 - confirmed signup is moved to email_verified
+ok 5 - confirmed signup has exactly one audit event for that transition
+ok 6 - signup also creates the profile_private row
+ok 7 - confirming the email later moves the user to email_verified
+ok 8 - illegal transition email_verified -> verified_alumni is rejected
+ok 9 - illegal transition email_verified -> trusted_member is rejected
+ok 10 - transition for a missing profile is rejected
+ok 11 - each legal transition writes exactly one audit event
+ok 12 - the audit event records the acting admin
+ok 13 - owner cannot UPDATE verification_events
+ok 14 - owner cannot rewrite the status recorded in an event
+ok 15 - owner cannot DELETE from verification_events
+ok 16 - owner cannot TRUNCATE verification_events
+ok 17 - deleting an account is still possible
+ok 18 - after account deletion the audit event survives with the user reference nulled
+ok 19 - anon sees only verified profiles that are public
+ok 20 - anon cannot read profile_private
+ok 21 - anon cannot read verification_events
+ok 22 - anon cannot read verification_requests
+ok 23 - anon cannot update profiles
+ok 24 - unverified member sees own profile and public verified profiles only
+ok 25 - member sees only their own profile_private row
+ok 26 - member cannot see other users' verification events
+ok 27 - member can see their own verification events
+ok 28 - member can update their own editable profile fields
+ok 29 - member cannot change their own verification_status
+ok 30 - member cannot make themselves admin
+ok 31 - member cannot change reputation_score or affiliation
+ok 32 - member cannot insert profiles
+ok 33 - member cannot delete profiles
+ok 34 - member cannot call the transition function directly
+ok 35 - member cannot forge an audit event
+ok 36 - member cannot insert verification_requests directly
+ok 37 - member cannot set their own student_id
+ok 38 - member can update their own contact fields
+ok 39 - cross-user profile update changed nothing
+ok 40 - verified member sees public and community profiles, not private or unverified ones
+ok 41 - verified member still cannot read other users' private fields
+ok 42 - admin sees every profile
+ok 43 - admin can read private fields for review
+ok 44 - admin can read any user's verification events
+ok 45 - even an admin cannot change verification_status with a direct update
+ok 46 - service role cannot delete audit events
+
+Negative control (run separately, same harness, to confirm the tests can fail):
+  An assertion expecting error 42501 on an update the member IS allowed to make
+  reported "not ok ... caught: no exception, wanted: 42501".
+  An assertion expecting a private profile to be visible to another member
+  reported "not ok ... have: 0, want: 1".
+  Both controls failed as intended.
+
+After the run: auth.users = 0 rows, profiles = 0 rows, verification_events = 0 rows,
+pgtap extension not installed (everything was rolled back).

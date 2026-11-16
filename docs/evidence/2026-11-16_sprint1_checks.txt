@@ -1,0 +1,29 @@
+IIUC Connect — Sprint 1 verification record
+Date: 2026-11-16
+
+Supabase advisors after migration 20261116104143_identity_schema
+  Security:    0 findings.
+  Performance: 1 notice type, level INFO: "unused index" x11. Expected: the
+               database is empty, so no index has been used yet. To be
+               re-checked after the search and UAT sprints.
+
+Application checks (Linux, Node 22.23.4, npm 10.9.9, Next.js 16.4.6)
+  npm run lint       pass, 0 problems
+  npm run typecheck  pass
+  npm test           pass, 5 of 5 (lib/env.schema.test.ts)
+  npm run build      pass; routes: / (static), /_not-found (static); proxy active
+  next start         GET / -> 200, title "IIUC Connect", viewport meta present;
+                     GET /does-not-exist -> 404; compiled CSS contains the
+                     custom theme utilities.
+
+npm audit
+  8 moderate advisories, all in the ESLint toolchain (typescript-eslint, pulled
+  in by eslint-config-next). Development-only; not part of the deployed app.
+  No fix available without a breaking downgrade; to be re-checked later.
+
+Not verified in this run
+  - The Supabase HTTP Data API could not be reached from the build sandbox
+    (network allowlist). Role behaviour was verified inside the database with
+    pgTAP instead; an HTTP-level check is on the manual checklist.
+  - The app has not yet been run on Windows or on a phone.
+  - Node 26 (the developers' local version) was not exercised here.
