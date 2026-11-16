@@ -4,6 +4,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { publicEnv } from "@/lib/env";
 import type { Database } from "@/types/database.types";
 
+/** Paths that send a signed-out visitor to the sign-in page. */
+const SIGNED_IN_ONLY = ["/dashboard"];
+
 /**
  * Refreshes the Supabase session on each request and writes the refreshed
  * cookies (and no-store cache headers) onto the response.
@@ -42,7 +45,18 @@ export async function updateSession(request: NextRequest) {
   // Do not add code between creating the client and getClaims(): doing so
   // can cause users to be signed out at random. getClaims() verifies the
   // token signature and refreshes the session if it has expired.
-  await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims();
+
+  // A convenience for signed-out visitors, not a security control: pages
+  // check the session again and the database enforces access.
+  const { pathname, search } = request.nextUrl;
+  if (!data?.claims && SIGNED_IN_ONLY.some((p) => pathname.startsWith(p))) {
+    const signIn = request.nextUrl.clone();
+    signIn.pathname = "/sign-in";
+    signIn.search = "";
+    signIn.searchParams.set("next", pathname + search);
+    return NextResponse.redirect(signIn);
+  }
 
   // The response object must be returned as-is so the refreshed cookies
   // reach the browser.

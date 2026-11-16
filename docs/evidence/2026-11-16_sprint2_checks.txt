@@ -1,0 +1,51 @@
+IIUC Connect — Sprint 2 verification record (accounts)
+Date: 2026-11-16
+Branch: sprint-2-auth
+
+Sprint 1 base re-checked on the developers' machine
+(Windows 11, Node 26.13.1, npm 11.20.0 — both listed as unverified in the
+Sprint 1 record)
+  npm run lint       pass, 0 problems
+  npm run typecheck  pass
+  npm test           pass, 5 of 5
+  npm run build      pass
+  Hosted database    1 migration applied (20261116104143_identity_schema),
+                     same as the repository
+  Security advisors  0 findings
+  types/database.types.ts  identical to types generated from the hosted schema
+
+Application checks after Sprint 2 (same machine)
+  npm run lint       pass, 0 problems
+  npm run typecheck  pass
+  npm test           pass, 28 of 28
+                     (lib/env.schema.test.ts 5, lib/auth/schemas.test.ts 23)
+  npm run build      pass; routes: / (static), /sign-in, /sign-up, /dashboard
+                     (partial prerender), /auth/confirm (dynamic); proxy active
+  Design detector    0 findings on the changed files
+
+Browser checks (next dev, built-in browser, 375x812 and desktop, light and dark)
+  GET /dashboard?tab=1 while signed out
+                     -> redirected to /sign-in?next=%2Fdashboard%3Ftab%3D1
+  /sign-in?notice=confirm-failed
+                     -> shows the fixed notice text; hidden "next" field set
+  Sign-in submitted with the address "a@b"
+                     -> server action returned the field error "Enter a valid
+                        email address."; email kept, password cleared;
+                        aria-invalid and aria-describedby point at the error
+  Field ids          unique per form instance (label targets its own input
+                     when Next.js keeps the previous route mounted)
+  Console            no errors on a clean load
+
+Not verified in this run
+  - No account was created, so sign-up, the confirmation email, sign-in with
+    real credentials, sign-out and the signed-in dashboard were not exercised
+    end to end. This needs a real mailbox and is on the manual checklist.
+  - The Supabase Site URL and Redirect URLs settings were not inspected.
+  - The new CI "database" job (supabase db start + supabase test db) was
+    pushed but its result could not be read from this machine: the repository
+    is private and the GitHub CLI is not signed in. Docker was not running
+    locally, so the job was not rehearsed locally either.
+  - The pgTAP file was not re-run against the hosted database after its
+    report query changed from two columns to one.
+  - No design review of the signed-in dashboard (it could not be rendered
+    without an account); DESIGN.md has not been written.

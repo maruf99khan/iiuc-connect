@@ -41,6 +41,24 @@ supabase/tests/       pgTAP tests for Row Level Security
 docs/evidence/        Saved test and audit output for the thesis report
 ```
 
+## Accounts
+
+| Route | What it does |
+|---|---|
+| `/sign-up` | Create an account with email and password |
+| `/sign-in` | Sign in; `?next=/path` returns the member to where they were going |
+| `/auth/confirm` | Landing point for the confirmation link Supabase emails |
+| `/dashboard` | Signed-in only; shows the member's verification status |
+
+Supabase dashboard settings these routes rely on (Authentication → URL Configuration):
+
+- **Site URL**: the address the app is served from (`http://localhost:3000` in development).
+- **Redirect URLs**: add `<site URL>/auth/confirm` for every address the app is served from.
+
+With Supabase's default email template, the confirmation link signs the member in only in the browser where they signed up; opened elsewhere it still confirms the email, and they sign in normally. To make the link work on any device, change the "Confirm signup" template link to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`.
+
+Not built yet: password reset, and resending the confirmation email.
+
 ## Security model
 
 Authorization is enforced in the database with Row Level Security. The app only ever talks to the database with the signed-in user's session and the publishable key, so the UI cannot grant access the database would refuse.
