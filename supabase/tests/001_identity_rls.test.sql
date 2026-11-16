@@ -355,6 +355,8 @@ reset role;
 -- Report
 -- -----------------------------------------------------------------------------
 insert into _tap_out (line) select * from extensions.finish();
-select seq, line from _tap_out order by seq;
+-- One column only: pg_prove (behind `supabase test db`) parses each row as a
+-- TAP line, so a leading sequence number would hide every result from it.
+select line from _tap_out order by seq;
 
 rollback;

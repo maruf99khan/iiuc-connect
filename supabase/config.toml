@@ -1,0 +1,8 @@
+# Local Supabase stack. Used by `supabase db start` and `supabase test db`
+# (the CI "database" job, and optional local runs with Docker).
+# The hosted project is configured in the Supabase dashboard, not here.
+project_id = "iiuc-connect"
+
+[db]
+# Keep in step with the hosted database (Postgres 17).
+major_version = 17
