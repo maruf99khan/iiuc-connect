@@ -38,20 +38,31 @@ export function AuthForm({ mode, next, notice }: AuthFormProps) {
   const emailId = `${id}-email`;
   const passwordId = `${id}-password`;
 
-  if (state.status === "sent") {
+  // The "sent" result the member stepped back from to correct their email.
+  const [dismissed, setDismissed] = useState<AuthFormState | null>(null);
+
+  if (state.status === "sent" && state !== dismissed) {
     return (
-      <div role="status" className="flex flex-col gap-3">
+      <div role="status" className="flex flex-col gap-4">
         <h2 className="text-xl font-semibold">Check your email</h2>
+        <div className="flex flex-col gap-1">
+          <p className="leading-7 text-muted">We sent a confirmation link to</p>
+          {/* On its own line and full strength, so a typo is hard to miss. */}
+          <p className="text-lg font-semibold break-all">{state.email}</p>
+        </div>
         <p className="leading-7 text-muted">
-          We sent a confirmation link to{" "}
-          <span className="font-medium break-all text-foreground">
-            {state.email}
-          </span>
-          . Open it on this device to finish creating your account.
+          Open the link on this device to finish creating your account.
+          Nothing after a few minutes? Check your spam folder.
         </p>
-        <p className="leading-7 text-muted">
-          Nothing after a few minutes? Check your spam folder. If you already
-          have an account, <Link href="/sign-in">sign in</Link> instead.
+        <button
+          type="button"
+          onClick={() => setDismissed(state)}
+          className="button button-quiet self-start"
+        >
+          That is not my email
+        </button>
+        <p className="text-sm text-muted">
+          Already have an account? <Link href="/sign-in">Sign in</Link>
         </p>
       </div>
     );
