@@ -75,13 +75,40 @@ Clean-up
   append-only log keeps events when an account is deleted (tested in pgTAP).
   Security advisors after the run: 0 findings.
 
+Sign-up end to end (2026-11-17; Playwright against `next dev`; 12/12 checks
+on a clean database)
+  Precondition: "Confirm email" was switched OFF in the Supabase dashboard by
+  the project owner. It is still off and MUST be switched back on before real
+  members sign up (it is what makes an email address mean anything).
+  Covered: the server refuses a too-short password with a clear message and
+  keeps the email; a real sign-up signs the member in and lands on /dashboard;
+  the dashboard shows "Your email is confirmed" and the member's address; the
+  member can sign out and back in; signing up again with the same address signs
+  nobody in and does not say the account exists; "That is not my email" returns
+  to the form with the address filled in and the password cleared; the original
+  password still works after the duplicate attempt; no uncaught page errors.
+  Database after the real sign-up: one auth user (confirmed), one profile with
+  status email_verified, one private row, exactly one audit event.
+  Test accounts deleted afterwards: 0 users, identities, sessions, profiles;
+  3 audit rows remain with user_id null (append-only log, by design).
+  Security advisors: 0 findings.
+
+Observations from that run
+  - With "Confirm email" off, a duplicate sign-up shows "Check your email" even
+    though nothing is sent (Supabase returns an error that the form hides to
+    avoid revealing which addresses are registered). With "Confirm email" on,
+    Supabase returns a normal-looking success, so the screens match. Behaviour to
+    re-check once the setting is back on.
+  - An early failure in this run was the test script editing the page before
+    React finished hydrating (hydration warning naming minLength). The page
+    alone produces no hydration errors. Script fixed; not an application bug.
+
 Not verified in this run
-  - Sign-up end to end. It needs either a working email provider or
-    "Confirm email" switched off in the Supabase dashboard (not reachable from
-    here). The sign-up form, its validation and the "Check your email" screen,
-    including "That is not my email", were not exercised with a real submit.
-  - The emailed confirmation link, and the ?code= / ?token_hash= success paths
-    of /auth/confirm (only the failure paths were exercised).
+  - Sign-up WITH "Confirm email" on: the email that is sent, the link inside
+    it, and the ?code= / ?token_hash= success paths of /auth/confirm (only the
+    failure paths were exercised). Needs a working email provider.
+  - Which email addresses the built-in mailer will deliver to, and its hourly
+    limit, were not measured.
   - The Supabase Site URL and Redirect URLs settings were not inspected.
   - The new CI "database" job: its result cannot be read from this machine
     (private repository, GitHub CLI not signed in). It was not rehearsed
