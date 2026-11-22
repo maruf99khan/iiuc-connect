@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    serverActions: {
+      // Verification evidence is uploaded through a Server Action. The file
+      // limit is 5 MB (lib/verification/claim.ts); this leaves room for the
+      // form fields and multipart overhead.
+      bodySizeLimit: "6mb",
+    },
+  },
   turbopack: {
     rules: {
       "*.css": {

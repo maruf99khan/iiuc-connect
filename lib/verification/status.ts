@@ -16,6 +16,8 @@ type StatusCopy = {
   detail: string;
   /** How many of VERIFICATION_STEPS are complete. */
   stepsDone: number;
+  /** What the member can do next, when there is something to do. */
+  action?: { href: string; label: string };
 };
 
 /**
@@ -31,13 +33,15 @@ export const VERIFICATION_COPY: Record<VerificationStatus, StatusCopy> = {
   email_verified: {
     headline: "Your email is confirmed",
     detail:
-      "Next we check that you are an IIUC student or graduate. This step is not open yet.",
+      "Next we check that you are an IIUC student or graduate. Send your details and a photo of your student ID card or certificate.",
     stepsDone: 2,
+    action: { href: "/verify", label: "Verify my IIUC affiliation" },
   },
   affiliation_pending: {
     headline: "Your affiliation is being reviewed",
     detail: "An admin is checking the details you submitted.",
     stepsDone: 2,
+    action: { href: "/verify", label: "View my request" },
   },
   verified_student: {
     headline: "You are a verified IIUC student",

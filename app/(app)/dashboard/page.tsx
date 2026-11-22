@@ -3,35 +3,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { signOut } from "@/app/(auth)/actions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { VERIFICATION_COPY, VERIFICATION_STEPS } from "@/lib/verification";
+import { VERIFICATION_COPY, VERIFICATION_STEPS } from "@/lib/verification/status";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default function DashboardPage() {
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-5 py-6 sm:py-10">
-      <header className="flex items-center justify-between gap-4">
-        <Link href="/" className="wordmark">
-          IIUC Connect
-        </Link>
-        <form action={signOut}>
-          <button type="submit" className="button button-quiet min-h-11 px-4 text-sm">
-            Sign out
-          </button>
-        </form>
-      </header>
-
-      <main className="mt-10 flex flex-col gap-8 sm:mt-14">
-        <Suspense
-          fallback={<p className="text-muted">Loading your account…</p>}
-        >
-          <AccountStatus />
-        </Suspense>
-      </main>
-    </div>
+    <Suspense fallback={<p className="text-muted">Loading your account…</p>}>
+      <AccountStatus />
+    </Suspense>
   );
 }
 
@@ -47,7 +29,7 @@ async function AccountStatus() {
   const supabase = await createClient();
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("verification_status")
+    .select("verification_status, role")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -118,7 +100,26 @@ async function AccountStatus() {
             );
           })}
         </ol>
+        {copy.action ? (
+          <Link href={copy.action.href} className="button button-primary self-start">
+            {copy.action.label}
+          </Link>
+        ) : null}
       </section>
+
+      {profile.role === "admin" ? (
+        <section aria-labelledby="admin-heading" className="flex flex-col gap-3">
+          <h2 id="admin-heading" className="text-lg font-semibold">
+            Admin
+          </h2>
+          <Link
+            href="/admin/verifications"
+            className="button button-quiet self-start"
+          >
+            Review verification requests
+          </Link>
+        </section>
+      ) : null}
     </>
   );
 }

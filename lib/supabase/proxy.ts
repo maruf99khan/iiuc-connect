@@ -5,7 +5,7 @@ import { publicEnv } from "@/lib/env";
 import type { Database } from "@/types/database.types";
 
 /** Paths that send a signed-out visitor to the sign-in page. */
-const SIGNED_IN_ONLY = ["/dashboard"];
+const SIGNED_IN_ONLY = ["/dashboard", "/verify", "/admin"];
 
 /**
  * Refreshes the Supabase session on each request and writes the refreshed

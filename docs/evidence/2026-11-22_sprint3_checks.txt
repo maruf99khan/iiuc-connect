@@ -1,0 +1,75 @@
+IIUC Connect — Sprint 3 verification record (affiliation verification)
+Date: 2026-11-22
+Branch: sprint-3-verification (cut from sprint-2-auth, which is not merged to main)
+Scope: document method only. The institutional-email method is not built (needs
+the IIUC email domain and a working mailer; both undecided).
+
+Database (migrations 20261122085521 verification_flow, 20261122085814
+merge_verification_update_policies; applied to the hosted project)
+  pgTAP supabase/tests/002_verification_flow.test.sql   55/55 passed, run in a
+  rolled-back transaction against the hosted schema (before and after the
+  policy merge). Covers: who may submit, edit, withdraw, decide; admin cannot
+  approve their own claim; rejection needs a reason; a decided claim is final;
+  one student ID per member; status, profile fields and audit event written
+  together; evidence folders per member; four documents refused; signed-out
+  visitors refused.
+  Mutation check (rolled back): replacing the admin UPDATE policy with one whose
+  WITH CHECK only tests the new status let an ordinary member approve their own
+  claim and become verified_student. Permissive-policy WITH CHECKs are OR-ed
+  across policies, so each must repeat its whole condition. The migration
+  comment says so; test 'a member cannot approve their own claim' guards it.
+  Security advisors: 0 findings. Performance advisors: unused-index INFO only
+  (empty database). A "multiple permissive policies" WARN from migration 002 was
+  removed by migration 003.
+  Found while testing: Supabase blocks DELETE on storage.objects entirely, so
+  deletion protection is asserted as 'no update/delete policy exists' instead.
+
+Application (Windows 11, Node 26.13.1)
+  npm run lint       pass, 0 problems
+  npm run typecheck  pass
+  npm test           pass, 67 of 67 (env 5, auth 23, verification claim 39)
+  npm run build      pass; routes add /verify and /admin/verifications
+  Design detector    0 findings on the changed files
+
+Browser (Playwright, Chromium, `next dev`, hosted database; 32/32)
+  Two confirmed throwaway accounts were inserted (member, admin); the admin was
+  promoted with the documented first-admin SQL. Both deleted afterwards.
+  Member: dashboard offers the step; form shows graduation year only for
+  graduates; a program renamed .jpg is refused by its content; a file over 5 MB
+  is refused; typed values survive a failed attempt; a valid claim moves the
+  member to the pending screen with correct details; the form is not shown
+  again; /admin/verifications redirects a non-admin.
+  Admin: review link appears; queue shows name, claim and document; the document
+  link is a short-lived signed URL returning the image (200 image/jpeg); a
+  tampered link and the public URL are refused (400); rejecting without a reason
+  is refused; rejecting with one shows a confirmation and empties the queue.
+  Member again: sees the reason, can resubmit, can withdraw; an alumni claim is
+  approved and the dashboard then says 'You are a verified IIUC graduate' with
+  all steps done, and /verify shows the verified summary. No uncaught page
+  errors. Screenshots reviewed: form, pending, rejected, approved (phone, light);
+  queue (desktop, light); queue (phone, dark).
+
+Bugs found by testing and fixed
+  1. Students could not submit a claim at all. A student's form has no
+     graduation-year field, so FormData.get returned null, which the schema
+     rejected with an error on a field the page never shows. Unit tests had
+     passed '' instead of null. Test added first (failed), then schema fixed.
+     The form also now shows an error summary so a failure is never silent.
+  2. Evidence-delete test blocked by Supabase (see above).
+  3. A test selector matched the new shared header's Sign out form (test only).
+
+Not verified / known gaps
+  - CI: the 'database' job (supabase db start + supabase test db) now also runs
+    002 and the storage policies. Its result cannot be read from this machine
+    (private repository). It assumes the local Postgres image ships the storage
+    schema; not rehearsed (Docker not running locally).
+  - Three synthetic test images remain in the verification-documents bucket.
+    Supabase blocks deleting storage rows from SQL and no service-role key was
+    used. Delete them in the dashboard (Storage). The same limitation means
+    evidence files outlive deleted accounts; a service-role purge job is needed
+    before real members upload IDs (purged_at column exists).
+  - 'Confirm email' is still switched off in the hosted project.
+  - Not exercised: a second admin deciding a claim already decided by the first
+    in a race; 'next start' (production server); Safari / iOS; a real phone.
+  - No screen lists decided requests; the audit log holds them.
+  - DESIGN.md and the finish design review have not been done.
