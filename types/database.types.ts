@@ -144,7 +144,7 @@ export type Database = {
           purged_at?: string | null
           request_id: string
           storage_path: string
-          user_id: string
+          user_id?: string
         }
         Update: {
           created_at?: string
@@ -251,7 +251,7 @@ export type Database = {
           reviewer_id?: string | null
           status?: Database["public"]["Enums"]["verification_request_status"]
           updated_at?: string
-          user_id: string
+          user_id?: string
         }
         Update: {
           claimed_affiliation?: Database["public"]["Enums"]["affiliation"]
