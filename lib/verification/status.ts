@@ -2,6 +2,16 @@ import type { Enums } from "@/types/database.types";
 
 export type VerificationStatus = Enums<"verification_status">;
 
+/** The statuses that mean an admin has confirmed the member's affiliation. */
+export const VERIFIED_STATUSES = [
+  "verified_student",
+  "verified_alumni",
+  "trusted_member",
+] as const satisfies readonly VerificationStatus[];
+
+export const isVerified = (status: VerificationStatus) =>
+  (VERIFIED_STATUSES as readonly VerificationStatus[]).includes(status);
+
 /** The path every member walks, in order. */
 export const VERIFICATION_STEPS = [
   "Account created",

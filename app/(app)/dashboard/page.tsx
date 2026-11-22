@@ -5,7 +5,11 @@ import { Suspense } from "react";
 
 import { getCurrentUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { VERIFICATION_COPY, VERIFICATION_STEPS } from "@/lib/verification/status";
+import {
+  VERIFICATION_COPY,
+  VERIFICATION_STEPS,
+  isVerified,
+} from "@/lib/verification/status";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -105,6 +109,22 @@ async function AccountStatus() {
             {copy.action.label}
           </Link>
         ) : null}
+      </section>
+
+      <section aria-labelledby="community-heading" className="flex flex-col gap-3">
+        <h2 id="community-heading" className="text-lg font-semibold">
+          Community
+        </h2>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Link href="/profile" className="button button-quiet">
+            Edit your profile
+          </Link>
+          {isVerified(profile.verification_status) ? (
+            <Link href="/directory" className="button button-quiet">
+              Browse the member directory
+            </Link>
+          ) : null}
+        </div>
       </section>
 
       {profile.role === "admin" ? (

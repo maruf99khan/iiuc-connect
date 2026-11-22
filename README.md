@@ -94,6 +94,20 @@ where id = (select id from auth.users where email = 'admin@example.com');
 - **One file per claim** in the form (the database allows three).
 - The queue shows open requests only; decided requests are in the audit log but have no screen yet.
 
+## Profiles and the member directory
+
+| Route | Who | What it does |
+|---|---|---|
+| `/profile` | Members | Edit headline, job, company, city, industry, skills, about, LinkedIn address and who can find you |
+| `/directory` | Verified members | Search and browse verified members, 20 per page |
+| `/members/[id]` | Verified members | One member's profile |
+
+- **Search** matches every word you type against name, headline, job, company, city, industry, department, batch and skills (case-insensitive, any part of a word). Filter by students or graduates. It runs on one `search_text` column kept up to date by a database trigger and indexed with `pg_trgm`; at 20,000 profiles a two-word search uses the index and takes about a millisecond.
+- **Who can find you** (each member chooses): *Verified IIUC members* (the default), *Everyone* (public), or *Only me*. The *Everyone* setting means visitors who are not signed in can read the profile through the database API, so the form says so in plain words. There is no public profile page yet.
+- **What an admin approved cannot be edited**: department, batch and graduation year have no member write access, and a verified member's name is locked (the database enforces both). Contact details (`profile_private`) never appear in the directory.
+- The LinkedIn address must be on `linkedin.com` over https. The database refuses anything else, and the member page re-checks it before showing a link.
+- Pages return HTTP 200 for a not-found member (the not-found screen is shown, no data leaks). Next streams the page before the check runs.
+
 ## Security model
 
 Authorization is enforced in the database with Row Level Security. The app only ever talks to the database with the signed-in user's session and the publishable key, so the UI cannot grant access the database would refuse.

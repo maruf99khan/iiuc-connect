@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useState, type ReactNode } from "react";
+import { useActionState, useId, useState } from "react";
 
 import {
   DOCUMENT_KINDS,
@@ -8,6 +8,8 @@ import {
   EVIDENCE_MAX_BYTES,
 } from "@/lib/verification/claim";
 import type { ClaimFormState } from "@/lib/verification/form-state";
+
+import { Field, aria } from "../field";
 
 import { submitClaim } from "./actions";
 
@@ -206,49 +208,5 @@ export function ClaimForm({ defaultName }: { defaultName: string }) {
         {pending ? "Sending…" : "Send for review"}
       </button>
     </form>
-  );
-}
-
-/** aria wiring shared by every input: points at the hint and any error. */
-function aria(id: string, error: string | undefined, hasHint: boolean) {
-  const described = [error ? `${id}-error` : null, hasHint ? `${id}-hint` : null]
-    .filter(Boolean)
-    .join(" ");
-  return {
-    "aria-invalid": error ? (true as const) : undefined,
-    "aria-describedby": described || undefined,
-  };
-}
-
-function Field({
-  id,
-  label,
-  hint,
-  error,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  error?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
-      {children}
-      {error ? (
-        <p id={`${id}-error`} className="text-sm text-danger">
-          {error}
-        </p>
-      ) : null}
-      {hint ? (
-        <p id={`${id}-hint`} className="text-sm text-muted">
-          {hint}
-        </p>
-      ) : null}
-    </div>
   );
 }

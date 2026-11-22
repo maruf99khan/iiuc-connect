@@ -18,9 +18,12 @@ export const VISIBILITY_LABELS: Record<
     title: "Verified IIUC members",
     detail: "Only members whose affiliation is verified can find you.",
   },
+  // Matches the database rules: a verified member with this setting can be read
+  // by visitors who are not signed in, so say so plainly.
   public: {
-    title: "Anyone signed in",
-    detail: "Any signed-in member can find you, verified or not.",
+    title: "Everyone, even visitors who are not signed in",
+    detail:
+      "Your name, headline and work details become publicly readable. Choose this only if you are comfortable with that.",
   },
   private: {
     title: "Only me",
@@ -59,7 +62,7 @@ const optionalText = (max: number) =>
  * subdomain of it, with no embedded credentials or port. A look-alike such as
  * linkedin.com.evil.example or https://linkedin.com@evil.example/ is refused.
  */
-function isLinkedInUrl(value: string): boolean {
+export function isLinkedInUrl(value: string): boolean {
   if (value.length > 300) return false;
   try {
     const url = new URL(value);

@@ -21,6 +21,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </form>
       </header>
 
+      <nav aria-label="Main" className="mt-5 flex gap-6 text-sm font-medium">
+        <Link href="/dashboard">Dashboard</Link>
+        <Link href="/directory">Directory</Link>
+        <Link href="/profile">Profile</Link>
+      </nav>
+
       <main className="mt-10 flex flex-col gap-8 sm:mt-14">{children}</main>
     </div>
   );
