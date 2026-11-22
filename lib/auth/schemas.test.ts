@@ -2,11 +2,60 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_SIGNED_IN_PATH,
+  emailOnlySchema,
   emailOtpTypeSchema,
+  newPasswordSchema,
   safeNextPath,
   signInSchema,
   signUpSchema,
 } from "@/lib/auth/schemas";
+
+describe("emailOnlySchema", () => {
+  it("trims and lower-cases the address", () => {
+    expect(emailOnlySchema.parse({ email: "  A@B.Com " }).email).toBe("a@b.com");
+  });
+
+  it.each(["", "nope", null, undefined])("rejects %j", (email) => {
+    expect(emailOnlySchema.safeParse({ email }).success).toBe(false);
+  });
+});
+
+describe("newPasswordSchema", () => {
+  const ok = { password: "a long password", confirm: "a long password" };
+
+  it("accepts two matching passwords", () => {
+    expect(newPasswordSchema.safeParse(ok).success).toBe(true);
+  });
+
+  it("rejects two passwords that differ, naming the confirm field", () => {
+    const result = newPasswordSchema.safeParse({ ...ok, confirm: "different one" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["confirm"]);
+    }
+  });
+
+  it("applies the sign-up length rules", () => {
+    expect(
+      newPasswordSchema.safeParse({ password: "short", confirm: "short" }).success,
+    ).toBe(false);
+    const long = "x".repeat(73);
+    expect(
+      newPasswordSchema.safeParse({ password: long, confirm: long }).success,
+    ).toBe(false);
+  });
+
+  it("keeps spaces inside the password", () => {
+    const spaced = " spaced out ";
+    expect(
+      newPasswordSchema.parse({ password: spaced, confirm: spaced }).password,
+    ).toBe(spaced);
+  });
+
+  it("rejects missing fields without throwing", () => {
+    expect(newPasswordSchema.safeParse({}).success).toBe(false);
+  });
+});
 
 describe("signUpSchema", () => {
   it("accepts a valid email and password", () => {

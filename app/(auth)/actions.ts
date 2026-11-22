@@ -4,12 +4,16 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import type { RecoveryFormState } from "@/lib/auth/form-state";
 import {
   DEFAULT_SIGNED_IN_PATH,
+  emailOnlySchema,
+  newPasswordSchema,
   safeNextPath,
   signInSchema,
   signUpSchema,
 } from "@/lib/auth/schemas";
+import { getCurrentUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
 import type { AuthFormState } from "./auth-form";
@@ -132,6 +136,7 @@ export async function signIn(
     if (error.code === "email_not_confirmed") {
       return {
         status: "error",
+        code: "email_not_confirmed",
         message:
           "Confirm your email first. Open the link we sent when you signed up.",
         email,
@@ -152,6 +157,137 @@ export async function signIn(
   }
 
   redirect(safeNextPath(formData.get("next")));
+}
+
+/**
+ * Emails a password-reset link. The answer is the same whether or not the
+ * address has an account, so this cannot be used to find out who is registered.
+ */
+export async function requestPasswordReset(
+  _previous: RecoveryFormState,
+  formData: FormData,
+): Promise<RecoveryFormState> {
+  const parsed = emailOnlySchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) {
+    return {
+      status: "error",
+      fieldErrors: z.flattenError(parsed.error).fieldErrors,
+      email: typedEmail(formData),
+    };
+  }
+
+  const { email } = parsed.data;
+  const origin = (await headers()).get("origin");
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: origin ? `${origin}/auth/reset` : undefined,
+  });
+
+  if (error) {
+    const limited = rateLimitMessage(error.code);
+    if (limited) return { status: "error", message: limited, email };
+    console.error("password reset request failed:", error.code ?? error.name);
+    return {
+      status: "error",
+      message: "We could not send the email. Try again in a moment.",
+      email,
+    };
+  }
+
+  return { status: "done", email };
+}
+
+/** Sends the sign-up confirmation email again. Same answer for every address. */
+export async function resendConfirmation(
+  _previous: RecoveryFormState,
+  formData: FormData,
+): Promise<RecoveryFormState> {
+  const parsed = emailOnlySchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) {
+    return {
+      status: "error",
+      fieldErrors: z.flattenError(parsed.error).fieldErrors,
+      email: typedEmail(formData),
+    };
+  }
+
+  const { email } = parsed.data;
+  const origin = (await headers()).get("origin");
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: origin ? { emailRedirectTo: `${origin}/auth/confirm` } : undefined,
+  });
+
+  if (error) {
+    const limited = rateLimitMessage(error.code);
+    if (limited) return { status: "error", message: limited, email };
+    console.error("resend confirmation failed:", error.code ?? error.name);
+    return {
+      status: "error",
+      message: "We could not send the email. Try again in a moment.",
+      email,
+    };
+  }
+
+  return { status: "done", email };
+}
+
+/** Sets a new password for the signed-in member (the reset link signs them in). */
+export async function updatePassword(
+  _previous: RecoveryFormState,
+  formData: FormData,
+): Promise<RecoveryFormState> {
+  if (!(await getCurrentUser())) {
+    redirect("/forgot-password?notice=expired");
+  }
+
+  const parsed = newPasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirm: formData.get("confirm"),
+  });
+  if (!parsed.success) {
+    return {
+      status: "error",
+      fieldErrors: z.flattenError(parsed.error).fieldErrors,
+    };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+
+  if (error) {
+    if (error.code === "same_password") {
+      return {
+        status: "error",
+        fieldErrors: { password: ["Choose a password you have not used before."] },
+      };
+    }
+    if (error.code === "weak_password") {
+      return {
+        status: "error",
+        fieldErrors: {
+          password: ["That password is too easy to guess. Try a longer one."],
+        },
+      };
+    }
+    const limited = rateLimitMessage(error.code);
+    if (limited) return { status: "error", message: limited };
+    console.error("password update failed:", error.code ?? error.name);
+    return {
+      status: "error",
+      message:
+        "We could not change your password. Ask for a new reset link and try again.",
+    };
+  }
+
+  // End every other session, so a session someone else already holds does not
+  // survive the reset.
+  await supabase.auth.signOut({ scope: "others" });
+  redirect("/dashboard");
 }
 
 export async function signOut() {

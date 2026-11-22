@@ -31,6 +31,20 @@ export const signInSchema = z.object({
     .max(72, { error: "Use 72 characters or fewer." }),
 });
 
+/** A form that asks for an email address and nothing else (reset, resend). */
+export const emailOnlySchema = z.object({ email });
+
+/** Choosing a new password: the same length rules as sign-up, typed twice. */
+export const newPasswordSchema = z
+  .object({
+    password: signUpSchema.shape.password,
+    confirm: z.string({ error: "Type the password again." }),
+  })
+  .refine((value) => value.password === value.confirm, {
+    path: ["confirm"],
+    error: "The two passwords do not match.",
+  });
+
 /** The `type` values Supabase puts in the links it emails. */
 export const emailOtpTypeSchema = z.enum([
   "signup",
