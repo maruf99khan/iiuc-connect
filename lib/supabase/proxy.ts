@@ -12,6 +12,7 @@ const SIGNED_IN_ONLY = [
   "/profile",
   "/directory",
   "/members",
+  "/sessions",
 ];
 
 /**

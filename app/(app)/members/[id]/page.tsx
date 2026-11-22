@@ -7,8 +7,11 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/session";
 import { memberLine, workLine } from "@/lib/directory/format";
 import { isLinkedInUrl } from "@/lib/profile/schema";
+import { formatDhaka } from "@/lib/sessions/slot";
 import { createClient } from "@/lib/supabase/server";
 import { isVerified } from "@/lib/verification/status";
+
+import { BookSlotForm } from "../../sessions/book-form";
 
 export const metadata: Metadata = { title: "Member" };
 
@@ -63,6 +66,19 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
       : null;
   const work = workLine(member);
 
+  // Open slots of a graduate, for another verified member to book. Row Level
+  // Security already hides a private mentor's slots and anyone else's bookings.
+  const { data: slots } =
+    member.affiliation === "alumni" && verified && !own
+      ? await supabase
+          .from("mentor_slots")
+          .select("id, starts_at, duration_minutes, topic")
+          .eq("mentor_id", id)
+          .eq("status", "open")
+          .gt("starts_at", new Date().toISOString())
+          .order("starts_at")
+      : { data: null };
+
   return (
     <>
       <div className="flex flex-col gap-2">
@@ -95,7 +111,10 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
       ) : null}
 
       {member.bio ? (
-        <section aria-labelledby="about-heading" className="flex flex-col gap-2">
+        <section
+          aria-labelledby="about-heading"
+          className="flex flex-col gap-2"
+        >
           <h2 id="about-heading" className="text-lg font-semibold">
             About
           </h2>
@@ -106,7 +125,10 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
       ) : null}
 
       {member.skills.length > 0 ? (
-        <section aria-labelledby="skills-heading" className="flex flex-col gap-3">
+        <section
+          aria-labelledby="skills-heading"
+          className="flex flex-col gap-3"
+        >
           <h2 id="skills-heading" className="text-lg font-semibold">
             Skills
           </h2>
@@ -132,6 +154,32 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
         >
           LinkedIn profile (opens in a new tab)
         </a>
+      ) : null}
+
+      {slots && slots.length > 0 ? (
+        <section aria-labelledby="book-heading" className="flex flex-col gap-4">
+          <h2 id="book-heading" className="text-lg font-semibold">
+            Book a session
+          </h2>
+          <p className="text-sm text-muted">All times are Bangladesh time.</p>
+          <ul className="flex flex-col divide-y divide-border border-y border-border">
+            {slots.map((slot) => (
+              <li key={slot.id} className="flex flex-col gap-3 py-5">
+                <p className="font-semibold">{formatDhaka(slot.starts_at)}</p>
+                <p>
+                  {slot.topic} · {slot.duration_minutes} minutes
+                </p>
+                <BookSlotForm slotId={slot.id} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {own && member.affiliation === "alumni" ? (
+        <Link href="/sessions" className="self-start">
+          Manage your sessions
+        </Link>
       ) : null}
 
       <Link href="/directory" className="self-start">

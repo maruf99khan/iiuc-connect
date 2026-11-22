@@ -14,6 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
+      mentor_slot_links: {
+        Row: {
+          meeting_url: string
+          slot_id: string
+        }
+        Insert: {
+          meeting_url: string
+          slot_id: string
+        }
+        Update: {
+          meeting_url?: string
+          slot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_slot_links_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: true
+            referencedRelation: "mentor_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentor_slots: {
+        Row: {
+          booked_at: string | null
+          booked_by: string | null
+          booker_note: string | null
+          created_at: string
+          duration_minutes: number
+          id: string
+          mentor_id: string
+          starts_at: string
+          status: string
+          topic: string
+        }
+        Insert: {
+          booked_at?: string | null
+          booked_by?: string | null
+          booker_note?: string | null
+          created_at?: string
+          duration_minutes: number
+          id?: string
+          mentor_id?: string
+          starts_at: string
+          status?: string
+          topic: string
+        }
+        Update: {
+          booked_at?: string | null
+          booked_by?: string | null
+          booker_note?: string | null
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          mentor_id?: string
+          starts_at?: string
+          status?: string
+          topic?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_slots_booked_by_fkey"
+            columns: ["booked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentor_slots_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_private: {
         Row: {
           created_at: string

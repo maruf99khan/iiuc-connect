@@ -131,6 +131,20 @@ where id = (select id from auth.users where email = 'admin@example.com');
 - The LinkedIn address must be on `linkedin.com` over https. The database refuses anything else, and the member page re-checks it before showing a link.
 - Pages return HTTP 200 for a not-found member (the not-found screen is shown, no data leaks). Next streams the page before the check runs.
 
+## Mentorship sessions
+
+Verified graduates offer short one-to-one slots; verified members book them.
+
+| Route | Who | What it does |
+|---|---|---|
+| `/sessions` | Members | Sessions you booked (with the meeting link); graduates also add and cancel slots and see who booked |
+| `/members/[id]` | Verified members | A graduate's page lists their open slots with a "Book this session" form |
+
+- A slot is 15 or 30 minutes, starts between 30 minutes and 60 days ahead, and has a meeting link (https). Times are entered and shown in Bangladesh time and stored in UTC.
+- Limits, enforced by the database: 10 open slots per graduate and 3 upcoming bookings per member. They are counted after the statement runs, so one request cannot add or book many rows at once.
+- The meeting link is in its own table and readable only by the graduate and the person who booked. A private graduate's slots are hidden. Either side can cancel; a cancelled slot keeps who had booked it.
+- No email or reminder is sent yet: members find slots on the graduate's page and bookings on `/sessions`.
+
 ## Security model
 
 Authorization is enforced in the database with Row Level Security. The app only ever talks to the database with the signed-in user's session and the publishable key, so the UI cannot grant access the database would refuse.
