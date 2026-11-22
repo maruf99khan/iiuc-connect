@@ -153,6 +153,16 @@ Authorization is enforced in the database with Row Level Security. The app only 
 - Sensitive personal fields live in `profile_private`, readable only by the owner and admins.
 - `verification_events` is append-only for every role.
 
+## Browser checks (Playwright)
+
+`e2e/*.py` drive the running app in Chromium (`pip install playwright && playwright install chromium`, then start `npm run dev`). They read `.env.local` and talk to whatever Supabase project it points at, so use a development project.
+
+- `e2e/security_anon.py` needs no accounts: signed-out redirects, redirect-target abuse, security headers, anonymous database and storage access, narrow-screen overflow. Exits non-zero if a header is missing.
+- `e2e/security_member.py` signs up a throwaway member (`audit-user@example.com`), tries privilege escalation and script injection, and leaves the account behind; delete it afterwards in the dashboard or with `delete from auth.users where email = 'audit-user@example.com'`.
+- `auth`, `signup`, `verify`, `directory`, `recovery` and `sessions` are the per-sprint flows. Some need synthetic accounts seeded first (see the top of each file) and "Confirm email" turned off.
+
+Security headers (`lib/security-headers.ts`) are unit-tested. The content security policy has no `script-src` yet; see the comment in that file.
+
 ## Database tests
 
 `supabase/tests/*.test.sql` are pgTAP tests. Each file runs inside one transaction that is rolled back, so it leaves no data behind. Run a file against the database (Supabase SQL editor, or `supabase test db` with the CLI) and read the TAP report it returns. Saved runs are in `docs/evidence/`.

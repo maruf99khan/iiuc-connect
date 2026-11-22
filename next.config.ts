@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { securityHeaders } from "./lib/security-headers";
+
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
@@ -11,6 +13,9 @@ const nextConfig: NextConfig = {
       // form fields and multipart overhead.
       bodySizeLimit: "6mb",
     },
+  },
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
   },
   turbopack: {
     rules: {
