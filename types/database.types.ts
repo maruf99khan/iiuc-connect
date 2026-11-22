@@ -72,6 +72,7 @@ export type Database = {
           onboarded_at: string | null
           reputation_score: number
           role: Database["public"]["Enums"]["user_role"]
+          search_text: string
           skills: string[]
           updated_at: string
           verification_status: Database["public"]["Enums"]["verification_status"]
@@ -96,6 +97,7 @@ export type Database = {
           onboarded_at?: string | null
           reputation_score?: number
           role?: Database["public"]["Enums"]["user_role"]
+          search_text?: string
           skills?: string[]
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -120,6 +122,7 @@ export type Database = {
           onboarded_at?: string | null
           reputation_score?: number
           role?: Database["public"]["Enums"]["user_role"]
+          search_text?: string
           skills?: string[]
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -291,7 +294,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      evidence_purge_candidates: {
+        Args: { p_limit?: number; p_retention_days?: number }
+        Returns: {
+          document_id: string
+          path: string
+          reason: string
+        }[]
+      }
+      mark_evidence_purged: {
+        Args: { p_document_ids: string[] }
+        Returns: number
+      }
     }
     Enums: {
       affiliation: "student" | "alumni"

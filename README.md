@@ -49,17 +49,40 @@ docs/evidence/        Saved test and audit output for the thesis report
 | `/sign-in` | Sign in; `?next=/path` returns the member to where they were going |
 | `/auth/confirm` | Landing point for the confirmation link Supabase emails |
 | `/dashboard` | Signed-in only; shows the member's verification status |
+| `/forgot-password` | Ask for a password-reset email (same answer whether or not the address has an account) |
+| `/auth/reset` | Landing point for the reset link Supabase emails |
+| `/reset-password` | Choose a new password; every other session is signed out |
 
 Supabase dashboard settings these routes rely on (Authentication → URL Configuration):
 
 - **Site URL**: the address the app is served from (`http://localhost:3000` in development).
-- **Redirect URLs**: add `<site URL>/auth/confirm` for every address the app is served from.
+- **Redirect URLs**: add `<site URL>/auth/confirm` **and** `<site URL>/auth/reset` for every address the app is served from.
 
 With Supabase's default email template, the confirmation link signs the member in only in the browser where they signed up; opened elsewhere it still confirms the email, and they sign in normally. To make the link work on any device, change the "Confirm signup" template link to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`.
 
 Supabase's built-in email service is for development only: it sends very few emails per hour (see Authentication → Rate Limits) and, per Supabase's documentation, delivers only to members of the project's organization. Once that hourly limit is reached, sign-up shows "We cannot send another email right now". Before anyone outside the team signs up, connect an SMTP provider under Authentication → Emails → SMTP Settings.
 
-Not built yet: password reset, and resending the confirmation email.
+Members who are not confirmed can ask for the confirmation email again (on the "Check your email" screen and when sign-in says the email is not confirmed). Members who forget their password use `/forgot-password`.
+
+## Before real members sign up
+
+These need your Supabase dashboard or GitHub account, so the code cannot do them for you. Until they are done, the app is fine for development and demos but not for real members.
+
+1. **Connect an email provider.** Supabase → Authentication → Emails → SMTP Settings (Resend and Brevo both have free tiers). The built-in mailer sends only a couple of emails an hour for the whole project and, per Supabase's documentation, delivers only to members of your Supabase organization. One typo plus one retry can lock everyone out for an hour.
+2. **Switch "Confirm email" back on.** Authentication → Sign In / Providers → Email. With it off, nothing checks that an address belongs to the person who typed it.
+3. **Set the URLs.** Authentication → URL Configuration: Site URL is the production address; Redirect URLs include `/auth/confirm` and `/auth/reset` for production and for `http://localhost:3000`.
+4. **Make email links work on any device (recommended).** Authentication → Emails → Templates. Confirm signup: link to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`. Reset password: link to `{{ .SiteURL }}/auth/reset?token_hash={{ .TokenHash }}&type=recovery`. With the default templates a link works only in the browser that asked for it.
+5. **Schedule the evidence clean-up** (below).
+6. **Create the first admin** (above) and delete any test files left in Storage.
+7. **Merge the sprint branches** once the GitHub Actions run on them is green.
+
+### Evidence clean-up
+
+ID photos must not outlive their purpose. `GET /api/cron/purge-evidence` deletes two kinds of file: documents whose claim was decided more than `EVIDENCE_RETENTION_DAYS` days ago (default 30), and stored files that no claim points to (for example, the account was deleted), once they are a day old. It records `purged_at` only after a file is confirmed gone, and does at most 100 of each kind per run.
+
+- It needs two server-only settings on the host: `SUPABASE_SECRET_KEY` (dashboard → Project Settings → API Keys → secret key; it bypasses Row Level Security, so keep it out of the repo and out of `NEXT_PUBLIC_` names) and `CRON_SECRET` (any random string of 24+ characters). Without them the route answers 503 and does nothing.
+- Callers must send `Authorization: Bearer <CRON_SECRET>`. On Vercel, add `{"crons":[{"path":"/api/cron/purge-evidence","schedule":"0 3 * * *"}]}` to `vercel.json`; Vercel sends that header when `CRON_SECRET` is set.
+- Only the service role can run the two database functions behind it (`evidence_purge_candidates`, `mark_evidence_purged`); members and visitors cannot.
 
 ## Affiliation verification
 
