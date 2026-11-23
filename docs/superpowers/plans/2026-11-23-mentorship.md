@@ -78,7 +78,7 @@ Run: `grep -n "pg_cron\|shared_preload" supabase/config.toml`. Expect no match (
 ## Task 2: Migration 1, availability, slots and generation
 
 **Files:**
-- Create: `supabase/migrations/20261123180000_mentor_availability.sql` (rename to the applied version)
+- Create: `supabase/migrations/20261123174737_mentor_availability.sql` (rename to the applied version)
 - Create: `supabase/tests/005_mentorship.test.sql` (header, fixtures, group A, tail)
 - Delete: `supabase/tests/004_mentor_sessions.test.sql`
 
@@ -313,7 +313,7 @@ Delete the old test first: `git rm supabase/tests/004_mentor_sessions.test.sql`.
 
 - [ ] **Step 3: Write migration 1**
 
-Create `supabase/migrations/20261123180000_mentor_availability.sql`:
+Create `supabase/migrations/20261123174737_mentor_availability.sql`:
 
 ```sql
 -- =============================================================================
@@ -712,7 +712,7 @@ insert into _tap_out (line) select extensions.throws_ok(
   '42501', null, 'a request''s goal cannot be edited');
 insert into _tap_out (line) select extensions.throws_ok(
   $$ update public.mentorship_requests set status = 'accepted', meeting_url = 'https://meet.example/x' $$,
-  '42501', null, 'a mentee cannot accept their own request');
+  '22023', null, 'a mentee cannot accept their own request (the state machine refuses)');
 
 select public._as(1);
 insert into _tap_out (line) select extensions.throws_ok(
@@ -723,7 +723,23 @@ insert into _tap_out (line) select extensions.throws_ok(
   '23514', null, 'the meeting link must use https');
 insert into _tap_out (line) select extensions.throws_ok(
   $$ update public.mentorship_requests set status = 'expired' $$,
-  '42501', null, 'a member cannot expire a request');
+  '22023', null, 'a member cannot expire a request (the state machine refuses)');
+
+-- The same two moves with the trigger switched off: the policy must refuse them alone.
+reset role;
+alter table public.mentorship_requests disable trigger requests_before_update;
+set local role authenticated;
+select public._as(2);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.mentorship_requests set status = 'accepted', meeting_url = 'https://meet.example/x' $$,
+  '42501', null, 'the policy alone refuses a mentee accepting their own request');
+select public._as(1);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.mentorship_requests set status = 'expired' $$,
+  '42501', null, 'the policy alone refuses a member expiring a request');
+reset role;
+alter table public.mentorship_requests enable trigger requests_before_update;
+set local role authenticated;
 
 -- Cancel, re-request, accept
 select public._as(2);
@@ -831,9 +847,6 @@ insert into _tap_out (line) select extensions.lives_ok(
 insert into _tap_out (line) select extensions.ok(
   (select outcome_at is not null from public.sessions where id = (select v from _ctx where k = 'sess2')),
   'closing a session records when');
-insert into _tap_out (line) select extensions.throws_ok(
-  $$ update public.sessions set status = 'cancelled' where id = (select v from _ctx where k = 'sess2') $$,
-  '42501', null, 'a member cannot cancel a session directly');
 
 -- A no-show session (Sue on s2)
 select public._as(3);
@@ -842,6 +855,9 @@ values ((select v from _ctx where k = 's2'), 15, 'Review my CV before applying',
 select public._as(1);
 update public.mentorship_requests set status = 'accepted', meeting_url = 'https://meet.example/room-3'
  where status = 'pending' and mentee_id = 'a6000000-0000-4000-8000-000000000003';
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.sessions set status = 'cancelled' where status = 'scheduled' $$,
+  '42501', null, 'a member cannot cancel a session directly');
 reset role;
 insert into _ctx (k, v) select 'sess3', id from public.sessions where status = 'scheduled';
 alter table public.sessions disable trigger sessions_before_update;

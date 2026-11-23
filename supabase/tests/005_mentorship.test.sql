@@ -205,8 +205,388 @@ insert into _tap_out (line) select extensions.is(
   (select count(*)::int from public.mentor_slots where id = (select v from _ctx where k = 's6')), 0,
   'a cancelled slot disappears for other members');
 
---__GROUP_B__
---__GROUP_C__
+-- -----------------------------------------------------------------------------
+-- B. Requests, responses, sessions, feedback
+-- -----------------------------------------------------------------------------
+reset role;
+insert into _ctx (k, v) select 'p1', id from public.mentor_slots
+ where mentor_id = 'a6000000-0000-4000-8000-000000000005';
+set local role authenticated;
+
+-- Requesting
+select public._as(2);
+insert into _tap_out (line) select extensions.lives_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     values ((select v from _ctx where k = 's1'), 20, 'Learn how to land a backend job', 'What should I build first?') $$,
+  'a verified student can request an open slot');
+insert into _tap_out (line) select extensions.is(
+  (select status::text from public.mentor_slots where id = (select v from _ctx where k = 's1')), 'held',
+  'the slot is held while the request is pending');
+
+select public._as(3);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     values ((select v from _ctx where k = 's2'), 15, 'short', 'What now?') $$,
+  '23514', null, 'a goal under 10 characters is refused');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     values ((select v from _ctx where k = 's2'), 15, 'A proper goal here', 'hi') $$,
+  '23514', null, 'a first question under 5 characters is refused');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     values ((select v from _ctx where k = 's2'), 45, 'A proper goal here', 'A real question?') $$,
+  '23514', null, 'only 15, 20 and 30 minute sessions are allowed');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     values ((select v from _ctx where k = 's1'), 15, 'A proper goal here', 'A real question?') $$,
+  '22023', null, 'a slot that is already held cannot be requested');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     select (select v from _ctx where k = 's2'), 15, 'A proper goal here', 'A real question?' from generate_series(1, 2) $$,
+  '23505', null, 'one statement cannot hold the same slot twice');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     values ((select v from _ctx where k = 'p1'), 15, 'A proper goal here', 'A real question?') $$,
+  '42501', null, 'a private mentor''s slot cannot be requested even with its id');
+
+select public._as(4);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     values ((select v from _ctx where k = 's2'), 15, 'A proper goal here', 'A real question?') $$,
+  '42501', null, 'a member who is not verified cannot request');
+
+select public._as(1);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     values ((select v from _ctx where k = 's3'), 15, 'A proper goal here', 'A real question?') $$,
+  '22023', null, 'a mentor cannot request their own slot');
+
+select public._as(2);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     values ((select v from _ctx where k = 's2'), 15, 'A proper goal here', 'A real question?') $$,
+  '23505', null, 'one pending request per mentee and mentor pair');
+
+-- Who sees requests
+select public._as(3);
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.mentorship_requests), 0, 'another member sees no requests');
+select public._as(2);
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.mentorship_requests), 1, 'the mentee sees their request');
+select public._as(1);
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.mentorship_requests), 1, 'the mentor sees the request addressed to them');
+select public._as(4);
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.mentorship_requests), 0, 'a member who is not verified sees no requests');
+select public._as(6);
+insert into _tap_out (line) select extensions.ok(
+  (select count(*) from public.mentorship_requests) >= 1, 'an admin sees requests');
+
+-- Edits and forbidden moves
+select public._as(2);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.mentorship_requests set goal = 'Changed my mind about it' $$,
+  '42501', null, 'a request''s goal cannot be edited');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.mentorship_requests set status = 'accepted', meeting_url = 'https://meet.example/x' $$,
+  '22023', null, 'a mentee cannot accept their own request (the state machine refuses)');
+
+select public._as(1);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.mentorship_requests set status = 'accepted' $$,
+  '23514', null, 'accepting needs a meeting link');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.mentorship_requests set status = 'accepted', meeting_url = 'http://meet.example/x' $$,
+  '23514', null, 'the meeting link must use https');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.mentorship_requests set status = 'expired' $$,
+  '22023', null, 'a member cannot expire a request (the state machine refuses)');
+
+-- The same two moves with the trigger switched off: the policy must refuse them alone.
+reset role;
+alter table public.mentorship_requests disable trigger requests_before_update;
+set local role authenticated;
+select public._as(2);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.mentorship_requests set status = 'accepted', meeting_url = 'https://meet.example/x' $$,
+  '42501', null, 'the policy alone refuses a mentee accepting their own request');
+select public._as(1);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.mentorship_requests set status = 'expired' $$,
+  '42501', null, 'the policy alone refuses a member expiring a request');
+reset role;
+alter table public.mentorship_requests enable trigger requests_before_update;
+set local role authenticated;
+
+-- Cancel, re-request, accept
+select public._as(2);
+insert into _tap_out (line) select extensions.lives_ok(
+  $$ update public.mentorship_requests set status = 'cancelled' where status = 'pending' $$,
+  'a mentee can cancel a pending request');
+insert into _tap_out (line) select extensions.is(
+  (select status::text from public.mentor_slots where id = (select v from _ctx where k = 's1')), 'open',
+  'cancelling reopens the slot');
+insert into _tap_out (line) select extensions.lives_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     values ((select v from _ctx where k = 's1'), 20, 'Learn how to land a backend job', 'What should I build first?') $$,
+  'the slot can be requested again');
+
+select public._as(1);
+insert into _tap_out (line) select extensions.lives_ok(
+  $$ update public.mentorship_requests set status = 'accepted', meeting_url = 'https://meet.example/room-1'
+      where status = 'pending' and mentee_id = 'a6000000-0000-4000-8000-000000000002' $$,
+  'the mentor can accept with a meeting link');
+insert into _tap_out (line) select extensions.is(
+  (select status::text from public.mentor_slots where id = (select v from _ctx where k = 's1')), 'booked',
+  'accepting books the slot');
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.sessions where status = 'scheduled'), 1,
+  'accepting creates a scheduled session');
+select public._as(2);
+insert into _tap_out (line) select extensions.is(
+  (select meeting_url from public.mentorship_requests where status = 'accepted'), 'https://meet.example/room-1',
+  'the mentee can read the meeting link once accepted');
+select public._as(3);
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.sessions), 0, 'another member cannot see the session');
+
+-- Cancelling an accepted request
+select public._as(2);
+insert into _tap_out (line) select extensions.lives_ok(
+  $$ update public.mentorship_requests set status = 'cancelled' where status = 'accepted' $$,
+  'a mentee can cancel an accepted request before it starts');
+select public._as(1);
+insert into _tap_out (line) select extensions.is(
+  (select status::text from public.sessions order by created_at limit 1), 'cancelled',
+  'cancelling cancels the session');
+insert into _tap_out (line) select extensions.is(
+  (select status::text from public.mentor_slots where id = (select v from _ctx where k = 's1')), 'open',
+  'cancelling an accepted request reopens the slot');
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.mentorship_requests where meeting_url is not null), 0,
+  'the meeting link is cleared on cancellation');
+
+-- Second session on s1: Sam requests again, Mona accepts
+select public._as(2);
+insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+values ((select v from _ctx where k = 's1'), 20, 'Learn how to land a backend job', 'What should I build first?');
+select public._as(1);
+update public.mentorship_requests set status = 'accepted', meeting_url = 'https://meet.example/room-2'
+ where status = 'pending' and mentee_id = 'a6000000-0000-4000-8000-000000000002';
+
+-- Declining and invalid transitions
+select public._as(3);
+insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+values ((select v from _ctx where k = 's2'), 15, 'Review my CV before applying', 'Is my CV too long?');
+select public._as(1);
+insert into _tap_out (line) select extensions.lives_ok(
+  $$ update public.mentorship_requests set status = 'declined' where status = 'pending' $$,
+  'a mentor can decline a request');
+insert into _tap_out (line) select extensions.is(
+  (select status::text from public.mentor_slots where id = (select v from _ctx where k = 's2')), 'open',
+  'declining reopens the slot');
+update public.mentorship_requests set status = 'accepted', meeting_url = 'https://meet.example/late' where status = 'declined';
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.mentorship_requests where status = 'declined'), 1,
+  'a declined request cannot be accepted afterwards');
+select public._as(3);
+insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+values ((select v from _ctx where k = 's2'), 15, 'Review my CV before applying', 'Is my CV too long?');
+select public._as(1);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.mentorship_requests set status = 'cancelled' where status = 'pending' and mentee_id = 'a6000000-0000-4000-8000-000000000003' $$,
+  '22023', null, 'only the mentee can cancel a pending request');
+select public._as(3);
+update public.mentorship_requests set status = 'cancelled' where status = 'pending';
+
+-- Sessions: closing them
+reset role;
+insert into _ctx (k, v) select 'sess2', id from public.sessions where status = 'scheduled';
+set local role authenticated;
+select public._as(1);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.sessions set status = 'completed' where id = (select v from _ctx where k = 'sess2') $$,
+  '22023', null, 'a session cannot be closed before it ends');
+reset role;
+alter table public.sessions disable trigger sessions_before_update;
+update public.sessions set starts_at = now() - interval '2 hours' where id = (select v from _ctx where k = 'sess2');
+alter table public.sessions enable trigger sessions_before_update;
+set local role authenticated;
+select public._as(2);
+update public.sessions set status = 'completed' where id = (select v from _ctx where k = 'sess2');
+insert into _tap_out (line) select extensions.is(
+  (select status::text from public.sessions where id = (select v from _ctx where k = 'sess2')), 'scheduled',
+  'a mentee cannot close the session');
+select public._as(1);
+insert into _tap_out (line) select extensions.lives_ok(
+  $$ update public.sessions set status = 'completed' where id = (select v from _ctx where k = 'sess2') $$,
+  'the mentor can mark a finished session completed');
+insert into _tap_out (line) select extensions.ok(
+  (select outcome_at is not null from public.sessions where id = (select v from _ctx where k = 'sess2')),
+  'closing a session records when');
+
+-- A no-show session (Sue on s2)
+select public._as(3);
+insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+values ((select v from _ctx where k = 's2'), 15, 'Review my CV before applying', 'Is my CV too long?');
+select public._as(1);
+update public.mentorship_requests set status = 'accepted', meeting_url = 'https://meet.example/room-3'
+ where status = 'pending' and mentee_id = 'a6000000-0000-4000-8000-000000000003';
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.sessions set status = 'cancelled' where status = 'scheduled' $$,
+  '42501', null, 'a member cannot cancel a session directly');
+reset role;
+insert into _ctx (k, v) select 'sess3', id from public.sessions where status = 'scheduled';
+alter table public.sessions disable trigger sessions_before_update;
+update public.sessions set starts_at = now() - interval '2 hours' where id = (select v from _ctx where k = 'sess3');
+alter table public.sessions enable trigger sessions_before_update;
+set local role authenticated;
+select public._as(1);
+insert into _tap_out (line) select extensions.lives_ok(
+  $$ update public.sessions set status = 'no_show' where id = (select v from _ctx where k = 'sess3') $$,
+  'the mentor can mark a no-show');
+
+-- Feedback
+select public._as(3);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.session_feedback (session_id, rating) values ((select v from _ctx where k = 'sess3'), 4) $$,
+  '22023', null, 'a no-show session cannot be rated');
+select public._as(2);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.session_feedback (session_id, rating) values ((select v from _ctx where k = 'sess2'), 6) $$,
+  '23514', null, 'a rating above 5 is refused');
+insert into _tap_out (line) select extensions.lives_ok(
+  $$ insert into public.session_feedback (session_id, rating, comment) values ((select v from _ctx where k = 'sess2'), 5, 'Very helpful') $$,
+  'the mentee can rate a completed session');
+insert into _tap_out (line) select extensions.is(
+  (select reviewee_id from public.session_feedback), 'a6000000-0000-4000-8000-000000000001'::uuid,
+  'the rating is about the other person in the session');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.session_feedback (session_id, rating) values ((select v from _ctx where k = 'sess2'), 4) $$,
+  '23505', null, 'one rating per person per session');
+select public._as(3);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.session_feedback (session_id, rating) values ((select v from _ctx where k = 'sess2'), 4) $$,
+  '22023', null, 'someone outside the session cannot rate it');
+
+select public._as(1);
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.session_feedback), 0,
+  'the mentor cannot see the rating before rating back');
+select public._as(2);
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.session_feedback), 1, 'a reviewer always sees their own rating');
+select public._as(1);
+insert into public.session_feedback (session_id, rating) values ((select v from _ctx where k = 'sess2'), 4);
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.session_feedback), 2, 'once both have rated, the mentor sees both');
+select public._as(2);
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.session_feedback), 2, 'once both have rated, the mentee sees both');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.session_feedback set rating = 1 $$, '42501', null, 'ratings cannot be edited');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ delete from public.session_feedback $$, '42501', null, 'ratings cannot be deleted');
+
+-- Reveal after 7 days (Stu12 on s5)
+select public._as(12);
+insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+values ((select v from _ctx where k = 's5'), 30, 'Mock interview practice', 'How do I explain gaps?');
+select public._as(1);
+update public.mentorship_requests set status = 'accepted', meeting_url = 'https://meet.example/room-4'
+ where status = 'pending' and mentee_id = 'a6000000-0000-4000-8000-000000000012';
+reset role;
+insert into _ctx (k, v) select 'sess4', id from public.sessions where status = 'scheduled';
+alter table public.sessions disable trigger sessions_before_update;
+update public.sessions set starts_at = now() - interval '2 hours' where id = (select v from _ctx where k = 'sess4');
+alter table public.sessions enable trigger sessions_before_update;
+set local role authenticated;
+select public._as(1);
+update public.sessions set status = 'completed' where id = (select v from _ctx where k = 'sess4');
+select public._as(12);
+insert into public.session_feedback (session_id, rating) values ((select v from _ctx where k = 'sess4'), 5);
+select public._as(1);
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.session_feedback where session_id = (select v from _ctx where k = 'sess4')), 0,
+  'a rating stays hidden from the other person while only one has rated');
+reset role;
+alter table public.sessions disable trigger sessions_before_update;
+update public.sessions set outcome_at = now() - interval '8 days' where id = (select v from _ctx where k = 'sess4');
+alter table public.sessions enable trigger sessions_before_update;
+set local role authenticated;
+select public._as(1);
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.session_feedback where session_id = (select v from _ctx where k = 'sess4')), 1,
+  'a rating is revealed 7 days after the session even if the other has not rated');
+
+select public._as(6);
+insert into _tap_out (line) select extensions.ok(
+  (select count(*) from public.sessions) >= 3 and (select count(*) from public.session_feedback) >= 3,
+  'an admin sees all sessions and ratings');
+
+-- Limits that one statement must not slip past
+select public._as(14);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+     select id, 15, 'A proper goal here', 'A real question?' from public.mentor_slots
+      where mentor_id in ('a6000000-0000-4000-8000-000000000007', 'a6000000-0000-4000-8000-000000000008',
+                          'a6000000-0000-4000-8000-000000000009', 'a6000000-0000-4000-8000-000000000010') $$,
+  '54000', null, 'one statement cannot give a member more than 3 live requests');
+
+reset role;
+insert into public.mentorship_requests (slot_id, mentee_id, duration_minutes, goal, question_1)
+values ((select v from _ctx where k = 'c1'), 'a6000000-0000-4000-8000-000000000002', 15, 'A proper goal here', 'A real question?'),
+       ((select v from _ctx where k = 'c2'), 'a6000000-0000-4000-8000-000000000003', 15, 'A proper goal here', 'A real question?'),
+       ((select v from _ctx where k = 'c3'), 'a6000000-0000-4000-8000-000000000012', 15, 'A proper goal here', 'A real question?'),
+       ((select v from _ctx where k = 'c4'), 'a6000000-0000-4000-8000-000000000013', 15, 'A proper goal here', 'A real question?');
+set local role authenticated;
+select public._as(1);
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ update public.mentorship_requests set status = 'accepted', meeting_url = 'https://meet.example/cap'
+      where slot_id in (select v from _ctx where k like 'c%') $$,
+  '54000', null, 'one statement cannot accept past the weekly cap');
+-- -----------------------------------------------------------------------------
+-- C. Scheduled jobs and rule removal
+-- -----------------------------------------------------------------------------
+reset role;
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from cron.job
+    where jobname in ('expire-mentorship-requests', 'generate-mentor-slots')), 2,
+  'both scheduled jobs exist');
+
+set local role authenticated;
+select public._as(14);
+insert into public.mentorship_requests (slot_id, duration_minutes, goal, question_1)
+values ((select v from _ctx where k = 's7'), 15, 'A proper goal here', 'A real question?');
+insert into _tap_out (line) select extensions.throws_ok(
+  $$ select private.expire_requests() $$, '42501', null, 'a member cannot run the expiry job');
+
+reset role;
+select set_config('request.jwt.claims', '', true);   -- the job runs with no signed-in user
+update public.mentorship_requests set expires_at = now() - interval '1 minute'
+ where mentee_id = 'a6000000-0000-4000-8000-000000000014';
+insert into _tap_out (line) select extensions.is(
+  (select private.expire_requests()), 1, 'the job expires the one overdue request');
+insert into _tap_out (line) select extensions.is(
+  (select status::text from public.mentorship_requests where mentee_id = 'a6000000-0000-4000-8000-000000000014'),
+  'expired', 'the request is marked expired');
+insert into _tap_out (line) select extensions.is(
+  (select status::text from public.mentor_slots where id = (select v from _ctx where k = 's7')), 'open',
+  'expiry reopens the slot');
+
+set local role authenticated;
+select public._as(1);
+delete from public.mentor_availability_rules;
+insert into _tap_out (line) select extensions.is(
+  (select count(*)::int from public.mentor_slots
+    where mentor_id = 'a6000000-0000-4000-8000-000000000001' and status = 'open' and starts_at > now()),
+  0, 'removing every rule withdraws the open slots');
+insert into _tap_out (line) select extensions.ok(
+  (select count(*) from public.mentor_slots
+    where mentor_id = 'a6000000-0000-4000-8000-000000000001' and status in ('held', 'booked')) > 0,
+  'slots that already have a request stay');
 
 reset role;
 insert into _tap_out (line) select * from extensions.finish();
