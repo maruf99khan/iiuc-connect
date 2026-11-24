@@ -29,7 +29,7 @@ create function public._as(n int) returns void language sql as $$
 $$;
 grant execute on function public._as(int) to public;
 
-select extensions.no_plan();
+insert into _tap_out (line) select extensions.plan(97);
 
 insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at)
 select ('a6000000-0000-4000-8000-0000000000' || lpad(n::text, 2, '0'))::uuid,
