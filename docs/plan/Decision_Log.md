@@ -199,3 +199,51 @@ Alternatives considered: Geist via next/font (extra download, build-time network
 Trade-offs accepted: Typography varies slightly between devices.
 Source: Next.js 16.4 documentation shipped in the package, "Caching" guide.
 Status: Accepted
+
+---
+
+Decision #: D-018
+Date: 2026-11-23
+Module: Mentorship
+Decision: Rebuild mentorship to the Master File's model (mentor profiles, weekly availability rules, generated slots, requests, sessions, blind feedback) instead of layering requests on the Sprint 5 "book a slot" design. The Sprint 5 tables, functions and tests were dropped; the hosted database held no data.
+Rationale: One model to explain, matching the ER diagram and the booking state machine in the report. The Sprint 5 design was built from an inferred scope before the plan files were in the repository.
+Alternatives considered: Keep Sprint 5 and add a request table on top (two overlapping models, harder to defend); keep Sprint 5 as is (does not match the plan's accept/decline flow).
+Trade-offs accepted: About a day of Sprint 5 work discarded; the mistake is recorded in the Dev Journal.
+Source: IIUC_Connect_Master_File_v2; docs/superpowers/specs/2026-11-23-mentorship-design.md.
+Status: Accepted
+
+---
+
+Decision #: D-019
+Date: 2026-11-23
+Module: Mentorship, authorization
+Decision: Member writes use column grants, RLS and triggers, not public RPC functions. Effects across tables (accepting a request creates the session and books the slot) run in SECURITY DEFINER triggers in the private schema. Policy checks that would make two tables' policies reference each other go through a SECURITY DEFINER helper (private.is_slot_requester, migration 009b).
+Rationale: A trigger cannot be bypassed by a direct table write. Postgres reports any cycle between two tables' policies as "infinite recursion", even for different commands; a definer function is not expanded into the outer query, which breaks the cycle. Found by the pgTAP run, not by reading.
+Alternatives considered: Public RPCs as D-014 asks (a direct table write would skip the rules unless every grant is also removed); a view for slot visibility (adds a second place to keep in step).
+Trade-offs accepted: Deviates from the letter of D-014. Logic lives in triggers, so errors surface as database codes (54000 limit, 22023 not possible, 42501 not allowed, 23505 duplicate) that the Server Actions translate to plain messages.
+Source: PostgreSQL, CREATE POLICY and CREATE TRIGGER; Supabase, Row Level Security.
+Status: Accepted. Proven by pgTAP file 005 (97 assertions) and e2e/mentorship.py (25 checks).
+
+---
+
+Decision #: D-020
+Date: 2026-11-23
+Module: Mentorship, jobs
+Decision: pg_cron inside the database runs request expiry (every 15 minutes) and nightly slot generation (20:00 UTC, which is 02:00 Bangladesh time). No external scheduler.
+Rationale: Free tier, no extra service, and the jobs call the same functions the tests exercise. Vercel's free cron is limited to daily runs, which is too coarse for a 72-hour expiry shown to users.
+Alternatives considered: Vercel cron (daily only on the free plan); Supabase Edge Function on a schedule (a second runtime to deploy and secure).
+Trade-offs accepted: The jobs are only proven by calling their functions; waiting for the schedule to fire was not done. pg_cron must exist on the local test stack too (the migration creates it).
+Source: Supabase, pg_cron documentation.
+Status: Accepted
+
+---
+
+Decision #: D-021
+Date: 2026-11-23
+Module: Authentication
+Decision: Password sign-up and sign-in is what was built in Sprint 2, in place of the email one-time-code flow the Master File describes.
+Rationale: Passwords work with Supabase's built-in email and need no project sender to test; the OTP flow depends on the project Gmail sender (D-010), which is not set up.
+Alternatives considered: Email OTP as planned (blocked on the sender); both (more surface to secure and test before the freeze).
+Trade-offs accepted: Deviates from the Master File without a prior decision, so this is logged late. Password reset exists and is tested; OTP does not.
+Source: Master File v2.1, authentication section.
+Status: Proposed. The supervisor and team should confirm or ask for OTP.

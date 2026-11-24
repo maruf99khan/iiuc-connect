@@ -133,17 +133,19 @@ where id = (select id from auth.users where email = 'admin@example.com');
 
 ## Mentorship sessions
 
-Verified graduates offer short one-to-one slots; verified members book them.
+A verified graduate sets weekly availability; a verified member requests a time; the graduate accepts (with a meeting link) or declines.
 
 | Route | Who | What it does |
 |---|---|---|
-| `/sessions` | Members | Sessions you booked (with the meeting link); graduates also add and cancel slots and see who booked |
-| `/members/[id]` | Verified members | A graduate's page lists their open slots with a "Book this session" form |
+| `/sessions` | Members | Your requests, your sessions (link, close, rate), requests to you; graduates also edit their mentor settings and weekly windows |
+| `/members/[id]` | Verified members | A graduate's page lists their open times, each with a "Request this time" form (goal, one or two questions, 15, 20 or 30 minutes) |
 
-- A slot is 15 or 30 minutes, starts between 30 minutes and 60 days ahead, and has a meeting link (https). Times are entered and shown in Bangladesh time and stored in UTC.
-- Limits, enforced by the database: 10 open slots per graduate and 3 upcoming bookings per member. They are counted after the statement runs, so one request cannot add or book many rows at once.
-- The meeting link is in its own table and readable only by the graduate and the person who booked. A private graduate's slots are hidden. Either side can cancel; a cancelled slot keeps who had booked it.
-- No email or reminder is sent yet: members find slots on the graduate's page and bookings on `/sessions`.
+- A graduate adds weekly windows (Bangladesh time, at most 8 hours each, at most 10 windows). The database generates 30-minute slots for the next two weeks, at once and then every night at 02:00 Bangladesh time (pg_cron).
+- A request waits 72 hours. Unanswered requests expire in a sweep that runs every 15 minutes, and the slot reopens. Accepting needs an https meeting link and creates the session.
+- Limits, enforced by the database: 3 live requests per member, one pending request per mentor, and the mentor's own weekly cap (1 to 10). Counts run after the statement, so one request cannot add many rows at once.
+- The mentor closes a finished session as completed or no-show. Ratings (1 to 5, optional comment) are blind: each side sees the other's only once both have rated, or 7 days after the session closed.
+- A private graduate's slots cannot be requested. The meeting link is visible only to the two people in the session.
+- No email, reminder or calendar file is sent yet (needs the project sender, D-010).
 
 ## Security model
 
@@ -159,7 +161,7 @@ Authorization is enforced in the database with Row Level Security. The app only 
 
 - `e2e/security_anon.py` needs no accounts: signed-out redirects, redirect-target abuse, security headers, anonymous database and storage access, narrow-screen overflow. Exits non-zero if a header is missing.
 - `e2e/security_member.py` signs up a throwaway member (`audit-user@example.com`), tries privilege escalation and script injection, and leaves the account behind; delete it afterwards in the dashboard or with `delete from auth.users where email = 'audit-user@example.com'`.
-- `auth`, `signup`, `verify`, `directory`, `recovery` and `sessions` are the per-sprint flows. Some need synthetic accounts seeded first (see the top of each file) and "Confirm email" turned off.
+- `auth`, `signup`, `verify`, `directory`, `recovery` and `mentorship` are the per-sprint flows. Some need synthetic accounts seeded first (see the top of each file) and "Confirm email" turned off. `mentorship.py` also pauses twice (`expiry`, `session`) and names a marker file; run the matching SQL from the docstring at the top of the script, then create that file. Delete the four `e2e-*@example.com` accounts afterwards.
 
 Security headers (`lib/security-headers.ts`) are unit-tested. The content security policy has no `script-src` yet; see the comment in that file.
 

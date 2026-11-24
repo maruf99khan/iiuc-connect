@@ -4,6 +4,14 @@ Seed first (see README "Browser checks"): four accounts e2e-mentor, e2e-student1
 e2e-student2 and e2e-private @example.com, verified, with mentor profiles for the
 two graduates. Two steps need SQL run by hand; the script prints NEED_SQL and
 waits for the marker file named in the message.
+
+  expiry:   update public.mentorship_requests set expires_at = now() - interval '1 minute'
+              where status = 'pending';
+            select private.expire_requests();
+  session:  alter table public.sessions disable trigger sessions_before_update;
+            update public.sessions set starts_at = now() - interval '2 hours'
+              where status = 'scheduled';
+            alter table public.sessions enable trigger sessions_before_update;
 """
 import json
 import pathlib

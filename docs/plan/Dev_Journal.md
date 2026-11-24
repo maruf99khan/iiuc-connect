@@ -111,3 +111,29 @@ Open observations:
 Lesson: Writing the denial tests in the same sitting as the policies turned the security design into something that can be re-run in seconds after every schema change. The negative control mattered: a suite that passes 46 of 46 on the first run should be distrusted until it has been shown to fail.
 
 Next: Team commits and pushes; confirm the Vercel deployment; manual checks on Windows and a phone; then Sprint 2 (OTP sign-in and onboarding), which needs the project Gmail app password.
+
+## 2026-11-24 — Day 8 — Sprint 6: mentorship rebuilt to the plan
+
+The journal has no entries for Sprints 2 to 5 (written 16 to 22 Nov); what was built then is in the commit history and `docs/evidence/`. This entry covers the reconciliation with the plan files and Sprint 6.
+
+What happened: the plan files (Master File v2.1, Decision Log, Instructions) were added to `docs/plan/`. Reading them against Sprints 2 to 5 showed Sprint 5 mentorship (publish a slot, someone books it) did not match the plan's request, accept or decline, session and blind-feedback flow. Rebuilt as D-018 to D-020; password sign-in recorded as D-021 (Proposed).
+
+| # | What happened | Cause | Fix | Cost |
+|---|---|---|---|---|
+| 1 | Sprint 5 mentorship built to a model the plan did not describe | Built from an inferred scope; the plan files were not in the repository | Dropped and rebuilt (D-018) | About a day |
+| 2 | A mentee could request a private graduate's slot | Found while writing the plan: the insert policy did not check slot visibility | Policy requires the slot to be visible to the caller | None; caught before building |
+| 3 | "Infinite recursion detected in policy" on the first test run | The new request policy and the slot policy referenced each other | Definer helper `private.is_slot_requester` (migration 009b) | About an hour |
+| 4 | One request could add or book past the limits | Counting in BEFORE triggers cannot see the other rows of the same statement (also seen in Sprint 5) | Counts in AFTER triggers, with tests that try it | None |
+| 5 | 3 of 88 tests failed | A BEFORE trigger refuses before RLS checks the row, so the error code differs | Corrected the expected codes in the tests | Minutes |
+| 6 | CI failed with "planned 97 tests but ran 0" | The hosted SQL tool shows only the last result set, so the test printed only failures; pg_prove needs every line | Test prints every TAP line | Two CI runs |
+| 7 | CI failed at setup-cli, "rate limit exceeded" | `version: latest` queries the GitHub API without a token | Pinned the CLI to 3.3.0 | One CI run |
+| 8 | My e2e script clicked a `<details>` that was already open | Script bug | Open it only when closed | Minutes |
+| 9 | Accepted requests still offered "Cancel session" after the session closed | Found by looking at the dark screenshot | Offered only while a scheduled session exists | Minutes |
+
+Decisions: D-018 to D-021 (D-021 Proposed).
+
+Evidence: `docs/evidence/2026-11-24_sprint6_checks.txt`.
+
+Lesson: Two of the three worst problems (3 and 6) were invisible until the tests ran somewhere other than where they were written. The hosted SQL tool and CI are different runners, so a test that passes in one needs one run in the other. The negative control was skipped for this file and is recorded as not done.
+
+Next: confirm CI on the pinned CLI; the owner-only setup (project sender, Confirm email, redirect URLs, cron secret); then Jobs and notifications if time allows. Feature freeze is 29 Nov.
