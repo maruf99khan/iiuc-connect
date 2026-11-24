@@ -68,7 +68,9 @@ Problems found while building, and how they were handled
      a scheduled session exists.
 
 Not verified
-  - The CI run with the CLI pin and the locked plan (pushed, result not read).
+  - (Resolved after this record was first written.) CI on commit 2266d2d, with the
+    CLI pinned and the plan locked at 97: the push run and the pull_request run both
+    completed with success (jobs verify and database).
   - pg_cron actually firing on schedule (only the functions were called by hand).
   - .ics calendar file and email or in-app reminders: not built (need the project
     sender, D-010).

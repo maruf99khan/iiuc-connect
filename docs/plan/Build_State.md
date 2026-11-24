@@ -44,7 +44,7 @@ Accounts, verification, the member directory and the mentorship request flow are
 
 ## Next up
 
-1. Read the CI result of the pull request on the pinned CLI; do not merge until it is green and the owner-only items are done.
+1. CI was green on 2266d2d (pinned CLI, plan locked). Read the result for the jobs commits (file 006 has not run in CI yet); do not merge until it is green and the owner-only items are done.
 2. Notifications and reminders (27 Nov) once the sender exists; otherwise start the PWA, performance and security pass (28 Nov).
 3. Negative control for `005_mentorship.test.sql` (a deliberately broken policy must fail it).
 4. Citation audit of the v1 bibliography → `Bibliography.md`. Known wrong: A5 (Farrow and Yuan), M3 (Lall, Chen and Mason). Suspect: R2, A2, M1, M2. Trace problem-statement statistics to primary sources.
