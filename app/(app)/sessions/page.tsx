@@ -145,8 +145,12 @@ async function Sessions({
   const allRequests = requests.data ?? [];
   const asMentee = allRequests.filter((r) => r.mentee_id === user.id);
   const asMentor = allRequests.filter((r) => r.mentor_id === user.id);
-  const live = asMentor.filter((r) => r.status === "pending" || r.status === "accepted");
   const byId = new Map(allRequests.map((r) => [r.id, r]));
+  // An accepted request can only be cancelled while its session is still scheduled.
+  const scheduled = new Set(
+    (sessions.data ?? []).filter((s) => s.status === "scheduled").map((s) => s.request_id),
+  );
+  const live = asMentor.filter((r) => r.status === "pending" || scheduled.has(r.id));
   const allFeedback = feedback.data ?? [];
 
   const noticeKey = (Object.keys(NOTICES) as (keyof typeof NOTICES)[]).find(
@@ -223,7 +227,7 @@ async function Sessions({
                     <CancelButton requestId={r.id} label="Cancel request" />
                   </>
                 ) : null}
-                {r.status === "accepted" ? (
+                {r.status === "accepted" && scheduled.has(r.id) ? (
                   <>
                     {r.meeting_url ? <MeetingLink url={r.meeting_url} /> : null}
                     <CancelButton requestId={r.id} label="Cancel session" />
