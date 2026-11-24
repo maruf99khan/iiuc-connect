@@ -4,7 +4,7 @@ Last updated: 2026-11-16 · Supersedes `iiucconnectmasterfile.pdf` (v1) and v2.0
 
 **Team**: Maruf Khan and Md Minhajul Alam · **Supervisor**: Jamil As-ad, Associate Professor, Dept. of CSE, IIUC · **Pre-defense**: 5 December 2026
 
-This file is the source of truth for scope, design decisions, thesis claims and the plan. The SQL in `supabase/migrations/` is the source of truth for the database. Companion docs: `Build_State.md` (where we are), `Decision_Log.md` (Appendix F), `Dev_Journal.md` (daily record, including mistakes), `Report_Plan.md` (report structure and the evidence each chapter needs).
+This file is the source of truth for scope, design decisions, thesis claims and the plan. The SQL in `supabase/migrations/` is the source of truth for the database. Companion docs: `Build_State.md` (where we are), `Decision_Log.md` (Appendix F), `Dev_Journal.md` (daily record, including mistakes), `Report_Plan.md` (report structure and the evidence each chapter needs), `Requirements.md` (requirement IDs mapped to tests).
 
 ---
 
@@ -203,4 +203,19 @@ No "first in Bangladesh" claims.
 
 Both: supervisor meetings, UAT, pre-defense slides.
 
-**Each session**: read `Build_State.md` → build one thing → test → update `Build_State.md`, `Decision_Log.md`, `Dev_Journal.md`.
+**Each session**: read `Build_State.md` → build one thing → test → update `Build_State.md`, `Decision_Log.md`, `Dev_Journal.md`. Any departure from this file is also added to section 14 in the same session (D-026).
+
+## 14. Amendments since v2.1
+
+Where the build departs from the text above. The text is left as written so the original plan stays readable; where the two disagree, this table wins. Reasons and rejected alternatives are in `Decision_Log.md`.
+
+| Where in this file | Plan says | Built, or now intended | Decision | Status |
+|---|---|---|---|---|
+| 6.1 Identity, section 12 (18 Nov) | Email one-time-code sign-in | Password sign-in, email confirmation link and password-reset link | D-021 | Proposed, awaiting owner |
+| Section 4, Should: Jobs | Post, apply, track | Built as planned: post, apply, shortlist or reject, withdraw, close, delete. Flat list of the newest 50; no editing, search or notifications | D-022 | Accepted |
+| 7 and 8, notifications | Notifications and a preferences table; email and reminders | In-app notification rows made by triggers; no preferences table, no email, no reminders yet | D-023 | Accepted |
+| 6.6 PWA | Installable PWA | Manifest and icons, deliberately no service worker, so no offline mode | D-024 | Accepted |
+| Section 4, Should: Jobs | Applications carry a message | Adds an optional PDF CV per application, a profile link for the poster, and portfolio and GitHub profile fields. Email notifications and the performance measurement move to after the freeze | D-025 | Proposed, awaiting owner |
+| 12 Plan | Jobs on 26 Nov; notifications on 27 Nov; PWA on 28 Nov | Jobs, in-app notifications and PWA were built on 24 Nov, ahead of the dates | D-022 to D-024 | Done |
+
+Mentorship was rebuilt to this file's model (D-018 to D-020), so it is not an amendment.

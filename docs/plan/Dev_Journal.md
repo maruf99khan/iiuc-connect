@@ -171,3 +171,19 @@ Not built, by decision (D-023): email, preferences, reminders.
 Later the same evening: made the app installable (manifest, three icons, Apple icon), decision D-024, evidence `docs/evidence/2026-11-24_pwa_checks.txt`. No service worker on purpose. The manifest test was written first and seen failing; the files are served to signed-out visitors (the proxy does not redirect them). Not tested: an actual install on a phone.
 
 Next: performance measurement (Lighthouse, throttled network) and the rest of the security pass (28 Nov); the remaining owner-only setup.
+
+## 2026-11-24 night to 2026-11-25 — Day 8 (late) — Email links tested by hand, demo data, records audit
+
+The owner came back and we went through the manual items one task at a time. Edited the two Supabase email templates (confirmation and reset) to link to the app's own pages, with a designed layout; turned "Confirm email" on; the owner signed up with a real mailbox, clicked the confirmation link, and reset the password through the emailed link. Both worked. A second account was promoted to admin with the README's SQL and approved the first account's student claim; the database showed the new status. The app was then empty, so I wrote `supabase/demo/demo_data.sql` (six members, two mentors with open slots, five jobs, one application) and `demo_cleanup.sql`.
+
+| # | What happened | Cause | Fix | Cost |
+|---|---|---|---|---|
+| 1 | The demo mentors had no open slots after the seed ran | Slot generation only serves members whose `affiliation` is `alumni`. The app sets it when a claim is submitted; my seed promoted members through the database function, which does not set it | Set `affiliation` in the seed, then ran the generator: 16 and 8 slots | Minutes |
+| 2 | The owner asked whether job applications carry more than a message, and whether a CV is needed | Applications hold the applicant's name and an optional message only; the plan never mentioned a CV. A profile link alone would not cover tailored CVs | Brainstormed three approaches; the owner chose a PDF per application. Logged as D-025, Proposed. Nothing built | A conversation |
+| 3 | The owner asked whether the main plan is kept current for the thesis | Decisions were being logged in the Decision Log only after they were built. The Master File had no note of its departures, the Report Plan still described OTP login, there were no requirement IDs, and the screenshots rule was not being followed | Added section 14 "Amendments since v2.1" to the Master File, refreshed the Report Plan, created `Requirements.md`, logged D-026 (records once per session, screenshots in one pass near the end) | About an hour |
+
+Lesson: seeding through internal functions skips side effects the app performs on the way, so a seed has to be checked by looking at what the screens show, not only at row counts. For the report: a plan file is only a source of truth if departures are written into it the same day.
+
+Not verified: the mapping of requirements to tests in `Requirements.md` has not been checked assertion by assertion; the screens with demo data have not been looked at by Claude, only by the owner on request.
+
+Next: owner approval of D-025; then, if approved, the CV build (migration and pgTAP first), the profile link and the profile fields.

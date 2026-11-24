@@ -1,6 +1,6 @@
 # IIUC Connect — Report Plan
 
-Updated: 2026-11-16. The outline below is the one the team supplied, adjusted to match what is actually being built. If the department has an official template, it overrides the layout; the content mapping stays.
+Updated: 2026-11-25 (first written 2026-11-16). The outline below is the one the team supplied, adjusted to match what is actually being built; the 25 Nov update brought sections 4.5, 4.7, 5.4 and 6.5 in line with the build (D-021 to D-026). If the department has an official template, it overrides the layout; the content mapping stays.
 
 ## Outline
 
@@ -39,9 +39,9 @@ Title Page · Declaration of Originality · Supervisor Approval Page · Abstract
 4.2 Technology Stack Justification (including the zero-cost constraint)
 4.3 Database Design (ER diagram, tables, relationships)
 4.4 Data Access Design: Server Actions, route handlers, authentication flow *(was "API Design")*
-4.5 Security Architecture (RLS, OTP, verification layers, privilege protection)
+4.5 Security Architecture (RLS, password sign-in with email confirmation, D-021; verification layers, privilege protection, private storage buckets)
 4.6 State Machines: verification and mentorship *(added)*
-4.7 UI/UX Design Decisions (mobile-first, PWA rationale)
+4.7 UI/UX Design Decisions (mobile-first; installable PWA with no service worker, and why, D-024)
 4.8 Deployment Architecture (Vercel, Supabase)
 
 ### Chapter 5: Implementation
@@ -49,10 +49,12 @@ Title Page · Declaration of Originality · Supervisor Approval Page · Abstract
 5.2 Sprint-by-Sprint Implementation Log (5.2.1 to 5.2.12, one per sprint)
 5.3 Key Technical Challenges and How They Were Solved
 5.4 Notable Logic
- 5.4.1 Verification state machine (OTP → institutional mailbox or document → vouching)
+ 5.4.1 Verification state machine (email confirmation → institutional mailbox or document → admin review; vouching is future work)
  5.4.2 Search and ranking (weighted full-text search, trigram matching)
  5.4.3 Mentorship booking logic (request limits, slot integrity, expiry, double-blind feedback)
  5.4.4 Privacy logic (row visibility and the private-fields table)
+ 5.4.5 Jobs and applications (poster-only visibility of applications, status moves, limits in AFTER triggers, per-application CV with poster-only access, D-022 and D-025)
+ 5.4.6 In-app notifications (trigger-made rows holding only a kind and a path, D-023)
 5.5 Code Architecture Decisions
 
 ### Chapter 6: Testing and Quality Assurance
@@ -60,7 +62,7 @@ Title Page · Declaration of Originality · Supervisor Approval Page · Abstract
 6.2 Unit Tests
 6.3 Integration and End-to-End Tests
 6.4 User Acceptance Testing
-6.5 Security Testing (RLS denial, privilege escalation, enumeration, storage access)
+6.5 Security Testing (RLS denial, privilege escalation, enumeration, storage access for verification documents and application CVs, anonymous access to every table)
 6.6 Performance Testing (page load on throttled 3G, search latency, load)
 6.7 Search Relevance Evaluation (precision@10) *(added)*
 6.8 Test Results Summary
@@ -130,7 +132,7 @@ Each is answerable by a measurement in Chapter 6.
 ## Evidence rules
 
 1. Every reported test run is saved as a file in `docs/evidence/` in the repo, dated.
-2. Every screen is screenshotted at 375 px and desktop width the day it is finished.
+2. Every screen is screenshotted at 375 px and desktop width in one pass after the last interface changes (D-026), saved in `docs/evidence/screenshots/`. Until then the interface is still changing.
 3. Every measurement records its conditions: device profile, network throttle, data size, date.
 4. Every problem goes into `Dev_Journal.md` the day it happens.
 5. Planned and actual dates are tracked in `Build_State.md`.

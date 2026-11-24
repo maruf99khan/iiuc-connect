@@ -283,3 +283,27 @@ Alternatives considered: A service worker caching static assets only (a small sp
 Trade-offs accepted: The installed app needs a connection and loads like the website. The claim "works on low bandwidth" rests on small pages and system fonts (D-017), not on caching, and must be measured separately.
 Source: MDN, Web app manifest; web.dev, Installation criteria. To be checked again against current browser behaviour before the report cites it.
 Status: Accepted. The manifest is unit-tested; an actual install on a phone is not yet tested.
+
+---
+
+Decision #: D-025
+Date: 2026-11-25
+Module: Jobs
+Decision: Let an applicant attach one optional PDF CV to each application, and let the poster open the applicant's profile from the application list. The CV is a file in a new private bucket, `application-cvs` (PDF only, 2 MB), at `{applicant_id}/{application_id}.pdf`. Only the applicant and the poster of that job can open it, through signed links that expire in 60 seconds. Admins cannot open CVs. Access ends when the application is withdrawn or deleted. The daily purge route also deletes CV files of withdrawn or deleted applications and files with no application. Profiles gain optional https-only `portfolio_url` and `github_url` fields. A private profile is not opened to a poster; the apply form warns the applicant instead.
+Rationale: The owner pointed out that different jobs call for different CVs and people tailor them per application, so a profile link alone does not replace a CV. The CV therefore belongs to the application, not the profile. It contains phone numbers and addresses, so access is limited to the two people who need it. The upload and signed-link code already exist for verification documents.
+Alternatives considered: A CV link field only (half a day, but the poster often cannot open a private Drive link); a CV saved once on the profile (cannot be tailored); keeping the message-only application (the gap the owner raised).
+Trade-offs accepted: About two days of the four before the freeze. Email notifications and the performance measurement move to after the freeze. Admins cannot see a CV even to moderate. A CV cannot be replaced; the applicant withdraws and applies again. Files are removed only once the server has the service key and the cron secret (owner-only items).
+Source: Master File v2.1 sections 4 and 8 (jobs: post, apply, track; job_applications visible to the poster). The CV is an addition to the plan; the Master File does not mention it.
+Status: Proposed. The design was presented to the owner on 25 Nov; the three points to confirm are that admins cannot read CVs, that a CV is optional, and that it is one PDF per application.
+
+---
+
+Decision #: D-026
+Date: 2026-11-25
+Module: Process
+Decision: Update `Decision_Log.md`, `Build_State.md` and `Dev_Journal.md` at the end of every working session, not after every decision. A choice that departs from the Master File is also added to its new "Amendments since v2.1" section in the same session. Screenshots for the report are taken in one pass after the last interface changes, at 375 px and desktop width. Test outputs keep being saved in `docs/evidence/` every session.
+Rationale: The owner noted that the interface is not the focus and will still change, so screenshots taken now would not match the final screens. Logging once per session keeps the record complete without interrupting the build. A Master File that contradicts the code is a risk in the defense, so deviations must be visible in one place.
+Alternatives considered: Logging each decision as made (more interruptions for the same content); screenshots after every screen (many would be replaced); leaving deviations only in the Decision Log (the Master File would still read as current).
+Trade-offs accepted: A decision made early in a session can wait hours for its entry. The screenshot pass is a single larger task near the freeze, so it must be put in the plan.
+Source: Report_Plan.md, evidence rules 1 to 5; CLAUDE.md, "How to work".
+Status: Accepted. The Report Plan's evidence rule 2 (screenshots the day a screen is finished) is replaced by this entry.

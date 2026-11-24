@@ -1,6 +1,6 @@
 # IIUC Connect — Build State
 
-Updated: 2026-11-24 · Feature freeze: 29 Nov 2026 · Pre-defense: 5 December 2026 · Days to freeze: 5
+Updated: 2026-11-25 · Feature freeze: 29 Nov 2026 · Pre-defense: 5 December 2026 · Days to freeze: 4
 
 ## Today's position
 
@@ -41,9 +41,13 @@ Accounts, verification, the member directory and the mentorship request flow are
 - Jobs board: `jobs` and `job_applications` with RLS, limits and status moves; screens at `/jobs`, `/jobs/new`, `/jobs/[id]`.
 - In-app notifications: trigger-made rows for mentorship and job events, owner-only read, `/notifications` and an unread count in the nav.
 - Tests: 301 pgTAP assertions across six files (274 in five files passed in CI on the jobs commits; file 007, 27 assertions, passed on the hosted database and has not run in CI yet), 244 unit tests, `e2e/*.py` Playwright scripts including `mentorship.py` (25 checks), `jobs.py` (22) and `notifications.py` (17).
+- Demo data: `supabase/demo/demo_data.sql` fills a test database with six members, two mentors with open slots, five jobs and an application; `demo_cleanup.sql` removes it all. The hosted development database currently holds the demo data and two real test accounts (a verified student and an admin), to be deleted after testing.
+- Report records: `docs/plan/Requirements.md` (requirement IDs mapped to tests, seeded 25 Nov, not yet checked line by line) and the Master File's new section 14, "Amendments since v2.1".
 - Evidence for each sprint in `docs/evidence/`; the latest are `2026-11-24_sprint6_checks.txt`, `2026-11-24_jobs_checks.txt` and `2026-11-24_notifications_checks.txt`.
 
 ## Next up
+
+0. **Awaiting owner approval (D-025):** an optional PDF CV per job application, a profile link for the poster, and portfolio and GitHub profile fields. Estimated two days; email notifications and the performance measurement would then move after the freeze. No code has been written for it.
 
 1. CI was green on 2266d2d (pinned CLI, plan locked). Read the result for the jobs commits (file 006 has not run in CI yet); do not merge until it is green and the owner-only items are done.
 2. PWA, performance and security pass (28 Nov). Email notifications and reminders once the app's server has the Gmail sender (a Vercel environment setting).
@@ -54,11 +58,12 @@ Accounts, verification, the member directory and the mentorship request flow are
 
 - [ ] Invite Minhajul to the GitHub repository and the Supabase project.
 - [x] Project Gmail account, 2-Step Verification, app password, entered in Supabase SMTP settings (D-010). Done 24 Nov; an invitation email arrived. Supabase's SMTP covers auth emails only; app emails need the same sender in the server's environment.
-- [ ] Turn "Confirm email" back on (it is off for development) before real members sign up.
+- [x] "Confirm email" turned back on 24 Nov. A real sign-up, the confirmation link and the password-reset link were each tried by hand with real mailboxes and worked.
 - [x] Redirect URLs for `/auth/confirm` and `/auth/reset` on `http://localhost:3000` (done 24 Nov).
-- [ ] The same two redirect URLs for the production address, and the two email templates (Confirm signup, Reset password).
+- [x] The two email templates (Confirm signup, Reset password) now link to the app's own pages, with a designed layout. Done 24 Nov.
+- [ ] The same two redirect URLs, and the Site URL, for the production address once the Vercel address is known.
 - [ ] `SUPABASE_SECRET_KEY` and `CRON_SECRET` on Vercel, and the daily `vercel.json` cron for `/api/cron/purge-evidence`.
-- [ ] First admin: the one-off SQL in the README after signing up.
+- [x] First admin on the development database made 24 Nov with the README's SQL; approval of a real student claim was tried by hand and worked. Repeat on any other database.
 - [ ] Delete leftover synthetic images in the verification storage bucket, if any.
 - [ ] Decide D-021: keep password sign-in or build email OTP.
 - [ ] Student ID format: what each character of `c231226` means; letters for other departments.
