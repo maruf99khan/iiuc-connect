@@ -259,3 +259,15 @@ Alternatives considered: An external apply link only (nothing to track, no cross
 Trade-offs accepted: A poster gets no contact details, only the applicant's name and message; a poster who made a typo must close and repost. Applicants with a private profile show to the poster as "A verified member".
 Source: IIUC_Connect_Master_File_v2, sections 6 and 8.
 Status: Accepted. Proven by pgTAP file 006 (57 assertions) and e2e/jobs.py (22 checks).
+
+---
+
+Decision #: D-023
+Date: 2026-11-24
+Module: Notifications
+Decision: Build in-app notifications first. A notification is a row made by a database trigger that holds only a kind and an in-app path; the app maps the kind to one fixed sentence. Members read, mark read and delete their own rows and cannot create any. No per-member preferences, no email, and no reminders in this version.
+Rationale: Email from the app needs the project sender in the server's environment, which the owner has not set up; Supabase's SMTP setting only covers auth emails. A row with no names or free text cannot leak anything a member typed, and the fixed sentences are testable in one unit test. Preferences have nothing to switch off until email exists.
+Alternatives considered: Email first (blocked on the sender); rows carrying a title and body (a place for personal data to leak, and a second copy of the wording to keep in step); a notification_preferences table now (nothing uses it yet).
+Trade-offs accepted: A member must open the app to see events. Notifications say "Someone applied to your job", not who; the name is on the job page.
+Source: IIUC_Connect_Master_File_v2, sections 7 and 8 (notifications and notification_preferences are in the plan; the preferences table is deferred).
+Status: Accepted. Proven by pgTAP file 007 (27 assertions) and e2e/notifications.py (17 checks).

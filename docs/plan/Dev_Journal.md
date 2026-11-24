@@ -153,3 +153,19 @@ Lesson: a test suite that passes completely on the first run needs one deliberat
 Not built, by decision (D-022): editing a posted job, search, and notifications.
 
 Next: notifications and reminders (27 Nov), which need the project email sender; otherwise the PWA, performance and security pass.
+
+## 2026-11-24 — Day 8 (evening) — In-app notifications, built while the owner was away
+
+The owner went out for a couple of hours and asked me to keep building. I chose the work that needed none of their accounts or secrets. Decision D-023. Evidence: `docs/evidence/2026-11-24_notifications_checks.txt`. By then the project email sender had been set up in Supabase; its first test failed because a normal Gmail password was used instead of an app password (Google error 534), and passed after the owner generated an app password.
+
+| # | What happened | Cause | Fix | Cost |
+|---|---|---|---|---|
+| 1 | The notifications test passed 27 of 27 on its first run | Possible real result, possible weak tests | Weakened the read policy in a rolled-back transaction and watched the matching assertion fail | Minutes |
+| 2 | Every signed-in page logged a "Date.now() while prerendering" error after adding the nav badge | The badge component created the database client before anything marked it request-time; Cache Components rejects that | `await connection()` first in the component | One rerun |
+| 3 | The jobs regression run failed | Leftover job and applications from the notifications run, not a code fault | Cleared the data and reran: 22/22 | Minutes |
+
+Lesson: a shared layout that reads per-member data is a rendering risk for every page at once, so one regression run of an older flow is the right check after touching it. The failure in 3 was a cleanup gap: each e2e script should leave the tables empty, and the notifications script does not delete its own job.
+
+Not built, by decision (D-023): email, preferences, reminders.
+
+Next: PWA, performance and security pass (28 Nov); the remaining owner-only setup.

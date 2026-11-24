@@ -161,6 +161,14 @@ Verified graduates post jobs; verified members apply inside the app and track th
 - A closed job disappears for everyone but its poster and admins. Deleting a job deletes its applications. Rejected and withdrawn applications cannot be reopened.
 - Not built yet: editing a posted job, search and filters, notifications (see D-022).
 
+## Notifications
+
+`/notifications` lists what changed on your sessions and jobs; the main nav shows the unread count.
+
+- A notification is a row made by a database trigger: a new session request (to the mentor), an accepted, declined, expired or cancelled request, a new job application (to the poster), a shortlist, rejection or withdrawal. Members cannot create one.
+- A row holds a kind and an in-app path only, never a name or text a member typed; the app turns the kind into one fixed sentence (`lib/notifications/text.ts`).
+- Members read, mark read (Open, or Mark all as read) and delete their own. Nothing is emailed yet and there are no preferences or reminders (see D-023).
+
 ## Security model
 
 Authorization is enforced in the database with Row Level Security. The app only ever talks to the database with the signed-in user's session and the publishable key, so the UI cannot grant access the database would refuse.
@@ -175,7 +183,7 @@ Authorization is enforced in the database with Row Level Security. The app only 
 
 - `e2e/security_anon.py` needs no accounts: signed-out redirects, redirect-target abuse, security headers, anonymous database and storage access, narrow-screen overflow. Exits non-zero if a header is missing.
 - `e2e/security_member.py` signs up a throwaway member (`audit-user@example.com`), tries privilege escalation and script injection, and leaves the account behind; delete it afterwards in the dashboard or with `delete from auth.users where email = 'audit-user@example.com'`.
-- `auth`, `signup`, `verify`, `directory`, `recovery`, `mentorship` and `jobs` are the per-sprint flows (`jobs.py` needs three seeded accounts and no SQL by hand). Some need synthetic accounts seeded first (see the top of each file) and "Confirm email" turned off. `mentorship.py` also pauses twice (`expiry`, `session`) and names a marker file; run the matching SQL from the docstring at the top of the script, then create that file. Delete the four `e2e-*@example.com` accounts afterwards.
+- `auth`, `signup`, `verify`, `directory`, `recovery`, `mentorship`, `jobs` and `notifications` are the per-sprint flows (`jobs.py` and `notifications.py` need three seeded accounts and no SQL by hand; `notifications.py` leaves a job behind, so clear `jobs` before running another script). Some need synthetic accounts seeded first (see the top of each file) and "Confirm email" turned off. `mentorship.py` also pauses twice (`expiry`, `session`) and names a marker file; run the matching SQL from the docstring at the top of the script, then create that file. Delete the four `e2e-*@example.com` accounts afterwards.
 
 Security headers (`lib/security-headers.ts`) are unit-tested. The content security policy has no `script-src` yet; see the comment in that file.
 
