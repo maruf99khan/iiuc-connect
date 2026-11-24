@@ -44,3 +44,6 @@ next-env.d.ts
 # Playwright output
 e2e/shots/
 e2e/*_results.json
+
+# Local-only archive of the v1 plan (11 MB PDF, superseded by Master File v2.1)
+docs/plan/archive/
