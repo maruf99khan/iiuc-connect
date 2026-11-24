@@ -303,7 +303,7 @@ insert into _tap_out (line) select extensions.is(
 
 reset role;
 insert into _tap_out (line) select * from extensions.finish();
-select line from _tap_out where line !~ '^ok' order by seq;
+select line from _tap_out order by seq;
 rollback;
 ```
 
