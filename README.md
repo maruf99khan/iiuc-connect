@@ -69,11 +69,11 @@ Members who are not confirmed can ask for the confirmation email again (on the "
 These need your Supabase dashboard or GitHub account, so the code cannot do them for you. Until they are done, the app is fine for development and demos but not for real members.
 
 1. **Connect an email provider.** Supabase → Authentication → Emails → SMTP Settings (Resend and Brevo both have free tiers). The built-in mailer sends only a couple of emails an hour for the whole project and, per Supabase's documentation, delivers only to members of your Supabase organization. One typo plus one retry can lock everyone out for an hour.
-2. **Switch "Confirm email" back on.** Authentication → Sign In / Providers → Email. With it off, nothing checks that an address belongs to the person who typed it.
+2. **Switch "Confirm email" back on.** Authentication → Sign In / Providers → Email. With it off, nothing checks that an address belongs to the person who typed it. (On for the development project since 24 Nov; do the same on any other project.)
 3. **Set the URLs.** Authentication → URL Configuration: Site URL is the production address; Redirect URLs include `/auth/confirm` and `/auth/reset` for production and for `http://localhost:3000`.
 4. **Make email links work on any device (recommended).** Authentication → Emails → Templates. Confirm signup: link to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`. Reset password: link to `{{ .SiteURL }}/auth/reset?token_hash={{ .TokenHash }}&type=recovery`. With the default templates a link works only in the browser that asked for it.
 5. **Schedule the evidence clean-up** (below).
-6. **Create the first admin** (above) and delete any test files left in Storage.
+6. **Create the first admin** (above) and delete any test files left in Storage (both buckets: `verification-documents` and `application-cvs`).
 7. **Merge the sprint branches** once the GitHub Actions run on them is green.
 
 ### Evidence clean-up
@@ -83,6 +83,7 @@ ID photos must not outlive their purpose. `GET /api/cron/purge-evidence` deletes
 - It needs two server-only settings on the host: `SUPABASE_SECRET_KEY` (dashboard → Project Settings → API Keys → secret key; it bypasses Row Level Security, so keep it out of the repo and out of `NEXT_PUBLIC_` names) and `CRON_SECRET` (any random string of 24+ characters). Without them the route answers 503 and does nothing.
 - Callers must send `Authorization: Bearer <CRON_SECRET>`. On Vercel, add `{"crons":[{"path":"/api/cron/purge-evidence","schedule":"0 3 * * *"}]}` to `vercel.json`; Vercel sends that header when `CRON_SECRET` is set.
 - Only the service role can run the two database functions behind it (`evidence_purge_candidates`, `mark_evidence_purged`); members and visitors cannot.
+- The same route also removes job-application CV files (`application-cvs` bucket) that no application points to, or whose application was withdrawn more than a day ago (`cv_purge_candidates`, service role only). The response lists the evidence counts and a `cvs` section. Until the two settings above exist, CV files left by withdrawn or deleted applications stay in storage.
 
 ## Affiliation verification
 
@@ -121,7 +122,7 @@ where id = (select id from auth.users where email = 'admin@example.com');
 
 | Route | Who | What it does |
 |---|---|---|
-| `/profile` | Members | Edit headline, job, company, city, industry, skills, about, LinkedIn address and who can find you |
+| `/profile` | Members | Edit headline, job, company, city, industry, skills, about, LinkedIn, GitHub and portfolio addresses and who can find you |
 | `/directory` | Verified members | Search and browse verified members, 20 per page |
 | `/members/[id]` | Verified members | One member's profile |
 
@@ -129,6 +130,7 @@ where id = (select id from auth.users where email = 'admin@example.com');
 - **Who can find you** (each member chooses): *Verified IIUC members* (the default), *Everyone* (public), or *Only me*. The *Everyone* setting means visitors who are not signed in can read the profile through the database API, so the form says so in plain words. There is no public profile page yet.
 - **What an admin approved cannot be edited**: department, batch and graduation year have no member write access, and a verified member's name is locked (the database enforces both). Contact details (`profile_private`) never appear in the directory.
 - The LinkedIn address must be on `linkedin.com` over https. The database refuses anything else, and the member page re-checks it before showing a link.
+- The optional GitHub address must be on `github.com` (or `www.github.com`) over https; the optional portfolio address may be on any host over https. Neither may carry credentials in the host (`https://github.com@evil.example/` is refused), and the member page re-checks both before showing a link (D-025).
 - Pages return HTTP 200 for a not-found member (the not-found screen is shown, no data leaks). Next streams the page before the check runs.
 
 ## Mentorship sessions
@@ -155,11 +157,13 @@ Verified graduates post jobs; verified members apply inside the app and track th
 |---|---|---|
 | `/jobs` | Members | Open jobs, your applications (with Withdraw), and the jobs you posted |
 | `/jobs/new` | Verified graduates | Post a job: title, company, location, type, description |
-| `/jobs/[id]` | Members | The job; members apply with an optional message; the poster closes, reopens or deletes it and shortlists or rejects each applicant |
+| `/jobs/[id]` | Members | The job; members apply with an optional message and an optional PDF CV; the poster closes, reopens or deletes it, opens each applicant's profile and CV, and shortlists or rejects each applicant |
+| `/jobs/[id]/cv/[applicationId]` | The applicant, the job's poster | Redirects to a 60-second signed link to that application's CV; anyone else gets 404 |
 
 - Limits, enforced by the database: 10 active jobs per graduate and 20 live applications per member, counted after the statement so one request cannot add many rows at once. One application per member per job.
 - A closed job disappears for everyone but its poster and admins. Deleting a job deletes its applications. Rejected and withdrawn applications cannot be reopened.
-- Not built yet: editing a posted job, search and filters, notifications (see D-022).
+- **CV on an application (D-025):** optional, one PDF of at most 2 MB, kept in the private `application-cvs` bucket at `{applicant_id}/{application_id}.pdf`. The server checks the file's first bytes, not its name. Only the applicant and the poster can open it, and the poster loses access when the application is withdrawn. **Admins cannot open CVs.** To change a CV, withdraw and apply again. A member whose own profile is private is warned on the apply form that the poster cannot open it.
+- Not built yet: editing a posted job, search and filters (see D-022); email notices to the poster.
 
 ## Notifications
 
@@ -183,7 +187,7 @@ Authorization is enforced in the database with Row Level Security. The app only 
 
 - `e2e/security_anon.py` needs no accounts: signed-out redirects, redirect-target abuse, security headers, anonymous database and storage access, narrow-screen overflow. Exits non-zero if a header is missing.
 - `e2e/security_member.py` signs up a throwaway member (`audit-user@example.com`), tries privilege escalation and script injection, and leaves the account behind; delete it afterwards in the dashboard or with `delete from auth.users where email = 'audit-user@example.com'`.
-- `auth`, `signup`, `verify`, `directory`, `recovery`, `mentorship`, `jobs` and `notifications` are the per-sprint flows (`jobs.py` and `notifications.py` need three seeded accounts and no SQL by hand; `notifications.py` leaves a job behind, so clear `jobs` before running another script). Some need synthetic accounts seeded first (see the top of each file) and "Confirm email" turned off. `mentorship.py` also pauses twice (`expiry`, `session`) and names a marker file; run the matching SQL from the docstring at the top of the script, then create that file. Delete the four `e2e-*@example.com` accounts afterwards.
+- `auth`, `signup`, `verify`, `directory`, `recovery`, `mentorship`, `jobs` and `notifications` are the per-sprint flows (`jobs.py` and `notifications.py` need three seeded accounts and no SQL by hand; `notifications.py` leaves a job behind, so clear `jobs` before running another script). Some need synthetic accounts seeded first (see the top of each file); with "Confirm email" on, insert them straight into `auth.users` already confirmed (with a bcrypt password from `extensions.crypt`) and move them through `private.transition_verification`. `jobs.py` also uploads a real test PDF and leaves it in the `application-cvs` bucket (deleting the job orphans it); remove it in the dashboard or let the daily purge do it. `mentorship.py` also pauses twice (`expiry`, `session`) and names a marker file; run the matching SQL from the docstring at the top of the script, then create that file. Delete the four `e2e-*@example.com` accounts afterwards.
 
 Security headers (`lib/security-headers.ts`) are unit-tested. The content security policy has no `script-src` yet; see the comment in that file.
 

@@ -34,8 +34,9 @@ Created 2026-11-25. This is the seed for Report Chapter 3.3 and 3.6 and for the 
 | R-JOB-01 | A verified member can post, close and delete a job; a poster has at most 10 active jobs | Should | `supabase/tests/006_jobs.test.sql`, `lib/jobs/schemas.test.ts`, `e2e/jobs.py` | Tested |
 | R-JOB-02 | A verified member can apply once per job, with an optional message, and withdraw | Should | `supabase/tests/006_jobs.test.sql`, `e2e/jobs.py` | Tested |
 | R-JOB-03 | Only the poster sees the applications to their job; the poster can shortlist or reject | Should | `supabase/tests/006_jobs.test.sql`, `e2e/jobs.py` | Tested |
-| R-JOB-04 | An application can carry an optional PDF CV that only the applicant and the poster can open (D-025) | Should | none yet | Planned; design awaiting owner approval |
-| R-JOB-05 | The poster can open an applicant's profile from the application list (D-025) | Should | none yet | Planned |
+| R-JOB-04 | An application can carry an optional PDF CV that only the applicant and the poster can open, and the poster loses access when the application is withdrawn (D-025) | Should | `supabase/tests/008_job_cv.test.sql` (46), `lib/jobs/cv.test.ts`, `lib/jobs/cv-purge.test.ts`, `e2e/jobs.py` | Tested; the cleanup route has not deleted a real file yet (needs the service key) |
+| R-JOB-05 | The poster can open an applicant's profile from the application list; a private profile is not opened (D-025) | Should | `e2e/jobs.py` (profile link and links shown to the poster) | Tested for a public profile; the private-profile case is written but not exercised in a browser |
+| R-PRF-04 | A member can add optional portfolio and GitHub addresses; only https, GitHub only on github.com, no credentials in the host (D-025) | Should | `supabase/tests/008_job_cv.test.sql`, `lib/profile/schema.test.ts`, `e2e/jobs.py` | Tested |
 | R-NOT-01 | A member sees in-app notifications for mentorship and job events, and no one can read another member's | Should | `supabase/tests/007_notifications.test.sql`, `lib/notifications/text.test.ts`, `e2e/notifications.py` | Tested |
 | R-NOT-02 | Email notifications and reminders | Could | none | Planned; needs the app's own email sender |
 | R-ADM-01 | An admin can be created only by the database owner, never through sign-up | Must | `supabase/tests/001_identity_rls.test.sql`; first admin made by SQL 24 Nov | Tested |
@@ -65,7 +66,7 @@ Created 2026-11-25. This is the seed for Report Chapter 3.3 and 3.6 and for the 
 ## Gaps this file shows
 
 1. No search-relevance measurement and no performance measurement yet, for R-DIR-01 and R-NFR-04.
-2. R-JOB-04 and R-JOB-05 are not built.
+2. R-JOB-04's file cleanup has not been seen deleting a real file, and the private-applicant case of R-JOB-05 has not been exercised in a browser.
 3. Several "Tested" rows depend on cron jobs that have not been seen firing on schedule (R-VER-04, R-MEN-03).
 4. The institutional-mailbox requirement, R-VER-05, is open until the student ID format is confirmed.
 5. The evidence mapping above has not been checked assertion by assertion.

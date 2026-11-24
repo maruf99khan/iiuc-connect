@@ -215,7 +215,7 @@ Where the build departs from the text above. The text is left as written so the 
 | Section 4, Should: Jobs | Post, apply, track | Built as planned: post, apply, shortlist or reject, withdraw, close, delete. Flat list of the newest 50; no editing, search or notifications | D-022 | Accepted |
 | 7 and 8, notifications | Notifications and a preferences table; email and reminders | In-app notification rows made by triggers; no preferences table, no email, no reminders yet | D-023 | Accepted |
 | 6.6 PWA | Installable PWA | Manifest and icons, deliberately no service worker, so no offline mode | D-024 | Accepted |
-| Section 4, Should: Jobs | Applications carry a message | Adds an optional PDF CV per application, a profile link for the poster, and portfolio and GitHub profile fields. Email notifications and the performance measurement move to after the freeze | D-025 | Proposed, awaiting owner |
+| Section 4, Should: Jobs | Applications carry a message | Adds an optional PDF CV per application, a profile link for the poster, and portfolio and GitHub profile fields. Email notifications and the performance measurement move to after the freeze | D-025 | Accepted, built 25 Nov |
 | 12 Plan | Jobs on 26 Nov; notifications on 27 Nov; PWA on 28 Nov | Jobs, in-app notifications and PWA were built on 24 Nov, ahead of the dates | D-022 to D-024 | Done |
 
 Mentorship was rebuilt to this file's model (D-018 to D-020), so it is not an amendment.

@@ -187,3 +187,23 @@ Lesson: seeding through internal functions skips side effects the app performs o
 Not verified: the mapping of requirements to tests in `Requirements.md` has not been checked assertion by assertion; the screens with demo data have not been looked at by Claude, only by the owner on request.
 
 Next: owner approval of D-025; then, if approved, the CV build (migration and pgTAP first), the profile link and the profile fields.
+
+## 2026-11-25 — Day 9 — Application CVs and profile links (D-025, sprint-7-job-cv)
+
+The owner approved the design, so I committed the records and cut `sprint-7-job-cv`. Order of work: pgTAP file first (46 assertions; the bucket, both columns and the purge function were shown absent before the migrations), then two migrations, then unit tests written and seen failing before each piece of code, then the screens, then browser checks. Evidence: `docs/evidence/2026-11-25_job_cv_checks.txt`.
+
+| # | What happened | Cause | Fix | Cost |
+|---|---|---|---|---|
+| 1 | The test file errored on its first run | A data-changing `WITH` inside a subquery is not allowed in PostgreSQL; I had used it for the two "cannot change" assertions | Ran the update as a plain statement, then asserted the state was unchanged (a stronger test as well) | One rerun |
+| 2 | pgTAP 45/46: "a file of an application withdrawn over a day ago is listed" failed | The code was right. A trigger stamps `updated_at` on every update, so my attempt to backdate the withdrawal in the test was overwritten | Turned triggers off for that one backdating statement in the test | One rerun |
+| 3 | Plan said 45 assertions | Miscounted the reading section (10, not 9) | Corrected to 46 | Seconds |
+| 4 | The e2e scripts could not seed accounts the old way | "Confirm email" is now on, so sign-ups wait for an email | Inserted three confirmed accounts straight into `auth.users` with a bcrypt password, then moved them through the verification function; deleted them afterwards | Minutes |
+| 5 | The cleanup route could not be exercised | `SUPABASE_SECRET_KEY` and `CRON_SECRET` are not set locally (owner-only). Deleting storage rows from SQL is blocked | Tested the pure logic with fake dependencies and the listing function in the database; wrote down that no real file has been deleted. Two test CV files remain in the bucket | Open item |
+
+A negative control was run on the read policy: swapping in a policy that lets any member read the bucket made a third member see the file, so the "cannot read" assertions can fail.
+
+Decisions worth recording: upload first, then insert the application, so an application never points at a missing file (the cost is an orphan file if the insert fails, which the purge removes). The CV link is a route that makes a 60-second signed link when clicked, not a link made when the page is built, so a page left open does not hold a dead link. Admins can read the application row but not the file: the route checks both and answers 404 to an admin.
+
+Not verified: a real phone; the private-applicant case (no link, a note) in a browser; the 2 MB limit enforced by Storage itself rather than by the app; the new migrations and file 008 in CI. CI was green on a162155, f8b8cba and 0a8a507 (files 001 to 007 have now run in CI).
+
+Next: push the branch and read CI; then the remaining owner items (production URLs, Vercel keys, supervisor answers, UAT participants), the screenshot pass, performance measurement.

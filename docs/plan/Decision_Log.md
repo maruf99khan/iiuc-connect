@@ -294,7 +294,7 @@ Rationale: The owner pointed out that different jobs call for different CVs and 
 Alternatives considered: A CV link field only (half a day, but the poster often cannot open a private Drive link); a CV saved once on the profile (cannot be tailored); keeping the message-only application (the gap the owner raised).
 Trade-offs accepted: About two days of the four before the freeze. Email notifications and the performance measurement move to after the freeze. Admins cannot see a CV even to moderate. A CV cannot be replaced; the applicant withdraws and applies again. Files are removed only once the server has the service key and the cron secret (owner-only items).
 Source: Master File v2.1 sections 4 and 8 (jobs: post, apply, track; job_applications visible to the poster). The CV is an addition to the plan; the Master File does not mention it.
-Status: Proposed. The design was presented to the owner on 25 Nov; the three points to confirm are that admins cannot read CVs, that a CV is optional, and that it is one PDF per application.
+Status: Accepted by the owner on 25 Nov (admins cannot read CVs; a CV is optional; one PDF per application) and built the same day. Proven by pgTAP file 008 (46 assertions) with a negative control, 27 new unit tests and e2e/jobs.py (44 checks); see docs/evidence/2026-11-25_job_cv_checks.txt. Not yet proven: the cleanup route deleting a real file, which needs the service key and cron secret (owner-only).
 
 ---
 
