@@ -14,6 +14,98 @@ export type Database = {
   }
   public: {
     Tables: {
+      job_applications: {
+        Row: {
+          applicant_id: string
+          created_at: string
+          id: string
+          job_id: string
+          message: string | null
+          status: Database["public"]["Enums"]["application_status"]
+          updated_at: string
+        }
+        Insert: {
+          applicant_id?: string
+          created_at?: string
+          id?: string
+          job_id: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+        }
+        Update: {
+          applicant_id?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          company: string
+          created_at: string
+          description: string
+          id: string
+          job_type: Database["public"]["Enums"]["job_type"]
+          location: string | null
+          poster_id: string
+          status: Database["public"]["Enums"]["job_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          description: string
+          id?: string
+          job_type: Database["public"]["Enums"]["job_type"]
+          location?: string | null
+          poster_id?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          description?: string
+          id?: string
+          job_type?: Database["public"]["Enums"]["job_type"]
+          location?: string | null
+          poster_id?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_poster_id_fkey"
+            columns: ["poster_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mentor_availability_rules: {
         Row: {
           created_at: string
@@ -597,7 +689,10 @@ export type Database = {
     }
     Enums: {
       affiliation: "student" | "alumni"
+      application_status: "submitted" | "shortlisted" | "rejected" | "withdrawn"
       document_kind: "student_id_card" | "certificate" | "transcript" | "other"
+      job_status: "active" | "closed"
+      job_type: "full_time" | "part_time" | "internship" | "contract"
       profile_visibility: "public" | "iiuc_community" | "private"
       request_status:
         | "pending"
@@ -749,7 +844,10 @@ export const Constants = {
   public: {
     Enums: {
       affiliation: ["student", "alumni"],
+      application_status: ["submitted", "shortlisted", "rejected", "withdrawn"],
       document_kind: ["student_id_card", "certificate", "transcript", "other"],
+      job_status: ["active", "closed"],
+      job_type: ["full_time", "part_time", "internship", "contract"],
       profile_visibility: ["public", "iiuc_community", "private"],
       request_status: [
         "pending",
