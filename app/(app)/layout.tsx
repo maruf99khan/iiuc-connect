@@ -1,7 +1,9 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import { signOut } from "@/app/(auth)/actions";
+
+import { UnreadCount } from "./unread-count";
 
 /** Shared frame for every signed-in page. Each page still checks the session. */
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -26,6 +28,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <Link href="/directory">Directory</Link>
         <Link href="/sessions">Sessions</Link>
         <Link href="/jobs">Jobs</Link>
+        <Link href="/notifications">
+          Notifications
+          <Suspense fallback={null}>
+            <UnreadCount />
+          </Suspense>
+        </Link>
         <Link href="/profile">Profile</Link>
       </nav>
 

@@ -106,6 +106,41 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          link: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          link: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["notification_kind"]
+          link?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mentor_availability_rules: {
         Row: {
           created_at: string
@@ -693,6 +728,16 @@ export type Database = {
       document_kind: "student_id_card" | "certificate" | "transcript" | "other"
       job_status: "active" | "closed"
       job_type: "full_time" | "part_time" | "internship" | "contract"
+      notification_kind:
+        | "request_received"
+        | "request_accepted"
+        | "request_declined"
+        | "request_cancelled"
+        | "request_expired"
+        | "application_received"
+        | "application_shortlisted"
+        | "application_rejected"
+        | "application_withdrawn"
       profile_visibility: "public" | "iiuc_community" | "private"
       request_status:
         | "pending"
@@ -848,6 +893,17 @@ export const Constants = {
       document_kind: ["student_id_card", "certificate", "transcript", "other"],
       job_status: ["active", "closed"],
       job_type: ["full_time", "part_time", "internship", "contract"],
+      notification_kind: [
+        "request_received",
+        "request_accepted",
+        "request_declined",
+        "request_cancelled",
+        "request_expired",
+        "application_received",
+        "application_shortlisted",
+        "application_rejected",
+        "application_withdrawn",
+      ],
       profile_visibility: ["public", "iiuc_community", "private"],
       request_status: [
         "pending",
