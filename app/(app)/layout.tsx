@@ -25,6 +25,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <Link href="/dashboard">Dashboard</Link>
         <Link href="/directory">Directory</Link>
         <Link href="/sessions">Sessions</Link>
+        <Link href="/jobs">Jobs</Link>
         <Link href="/profile">Profile</Link>
       </nav>
 
