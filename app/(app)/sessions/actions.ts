@@ -4,11 +4,17 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth/session";
-import type { SessionFormState } from "@/lib/sessions/form-state";
-import { bookingNoteSchema, slotSchema } from "@/lib/sessions/slot";
+import type { MentorshipField, MentorshipFormState } from "@/lib/mentorship/form-state";
+import {
+  feedbackSchema,
+  idSchema,
+  mentorProfileSchema,
+  outcomeSchema,
+  requestSchema,
+  respondSchema,
+  ruleSchema,
+} from "@/lib/mentorship/schemas";
 import { createClient } from "@/lib/supabase/server";
-
-const idSchema = z.uuid();
 
 async function requireUser() {
   const user = await getCurrentUser();
@@ -16,172 +22,261 @@ async function requireUser() {
   return user;
 }
 
-function echo(formData: FormData, fields: readonly string[]) {
-  const values: Record<string, string> = {};
+/** What the member typed, trimmed to a safe length, so a failed form keeps its text. */
+function echo(formData: FormData, fields: readonly MentorshipField[]) {
+  const values: Partial<Record<MentorshipField, string>> = {};
   for (const field of fields) {
     const value = formData.get(field);
-    if (typeof value === "string") values[field] = value.slice(0, 400);
+    if (typeof value === "string") values[field] = value.slice(0, 600);
   }
-  return values as SessionFormState["values"];
+  return values;
 }
 
-const OFFER_FIELDS = ["startsAt", "duration", "topic", "meetingUrl"] as const;
+function raw(formData: FormData, fields: readonly MentorshipField[]) {
+  return Object.fromEntries(fields.map((f) => [f, formData.get(f)]));
+}
 
-/** A verified graduate offers a slot, with the meeting link only the booker sees. */
-export async function offerSlot(
-  _previous: SessionFormState,
+function invalid(
+  error: z.ZodError,
+  values: MentorshipFormState["values"],
+): MentorshipFormState {
+  return {
+    status: "error",
+    message: "Some details need fixing. Check the fields marked below.",
+    fieldErrors: z.flattenError(error).fieldErrors as MentorshipFormState["fieldErrors"],
+    values,
+  };
+}
+
+/** Plain-language messages for the database's refusals. Never shows raw errors. */
+function dbMessage(code: string | undefined, fallback: string): string {
+  switch (code) {
+    case "54000":
+      return "You have reached a limit: 3 live requests, the mentor's weekly sessions, or 10 weekly windows. Cancel one first.";
+    case "42501":
+      return "You are not allowed to do that.";
+    case "22023":
+      return "That is no longer possible. The slot may have been taken or the time has passed. Reload the page and check.";
+    case "23505":
+      return "You already have a pending request with this mentor, or the slot was just taken.";
+    default:
+      return fallback;
+  }
+}
+
+function log(action: string, code: string | undefined) {
+  if (!["54000", "42501", "22023", "23505"].includes(code ?? "")) {
+    console.error(`${action} failed:`, code);
+  }
+}
+
+const PROFILE_FIELDS = ["expertiseAreas", "bio", "maxSessions", "accepting"] as const;
+
+/** A verified graduate creates or updates their mentor profile. */
+export async function saveMentorProfile(
+  _previous: MentorshipFormState,
   formData: FormData,
-): Promise<SessionFormState> {
-  await requireUser();
-  const values = echo(formData, OFFER_FIELDS);
+): Promise<MentorshipFormState> {
+  const user = await requireUser();
+  const values = echo(formData, PROFILE_FIELDS);
+  const parsed = mentorProfileSchema.safeParse(raw(formData, PROFILE_FIELDS));
+  if (!parsed.success) return invalid(parsed.error, values);
 
-  const parsed = slotSchema.safeParse(
-    Object.fromEntries(OFFER_FIELDS.map((f) => [f, formData.get(f)])),
-  );
-  if (!parsed.success) {
+  const supabase = await createClient();
+  const { data: updated, error: updateError } = await supabase
+    .from("mentor_profiles")
+    .update(parsed.data)
+    .eq("id", user.id)
+    .select("id");
+
+  let code = updateError?.code;
+  if (!updateError && updated.length === 0) {
+    const { error } = await supabase.from("mentor_profiles").insert(parsed.data);
+    code = error?.code;
+  }
+
+  if (code) {
+    log("save mentor profile", code);
     return {
       status: "error",
-      message: "Some details need fixing. Check the fields marked below.",
-      fieldErrors: z.flattenError(parsed.error).fieldErrors,
+      message: dbMessage(code, "We could not save your mentor profile. Nothing changed. Try again."),
       values,
     };
   }
+  redirect("/sessions?saved=1");
+}
 
-  const { meeting_url, ...slot } = parsed.data;
+const RULE_FIELDS = ["weekday", "startTime", "endTime"] as const;
+
+/** A mentor adds one weekly availability window; slots appear at once. */
+export async function addRule(
+  _previous: MentorshipFormState,
+  formData: FormData,
+): Promise<MentorshipFormState> {
+  await requireUser();
+  const values = echo(formData, RULE_FIELDS);
+  const parsed = ruleSchema.safeParse(raw(formData, RULE_FIELDS));
+  if (!parsed.success) return invalid(parsed.error, values);
+
   const supabase = await createClient();
-
-  const { data: created, error } = await supabase
-    .from("mentor_slots")
-    .insert(slot)
-    .select("id")
-    .single();
-
-  if (error || !created) {
-    const message =
-      error?.code === "54000"
-        ? "You already have 10 open slots. Cancel one before adding another."
-        : error?.code === "42501"
-          ? "Only verified graduates can offer sessions."
-          : "We could not add the slot. Nothing was saved. Try again.";
-    if (!["54000", "42501"].includes(error?.code ?? "")) {
-      console.error("offer slot failed:", error?.code);
-    }
-    return { status: "error", message, values };
-  }
-
-  const { error: linkError } = await supabase
-    .from("mentor_slot_links")
-    .insert({ slot_id: created.id, meeting_url });
-
-  if (linkError) {
-    console.error("offer slot link failed:", linkError.code);
-    // A slot nobody can join must not stay open.
-    await supabase
-      .from("mentor_slots")
-      .update({ status: "cancelled" })
-      .eq("id", created.id);
+  const { error } = await supabase.from("mentor_availability_rules").insert(parsed.data);
+  if (error) {
+    log("add rule", error.code);
     return {
       status: "error",
       message:
-        "We could not save the meeting link. Nothing was added. Try again.",
+        error.code === "23505"
+          ? "You already have a window starting at that time on that day."
+          : dbMessage(error.code, "We could not add the window. Nothing changed. Try again."),
       values,
     };
   }
-
-  redirect("/sessions?added=1");
+  redirect("/sessions?rule=1");
 }
 
-/** The mentor cancels one of their own slots (open or booked). */
-export async function cancelSlot(formData: FormData) {
+/** A mentor removes a window; its future open slots are withdrawn. */
+export async function removeRule(formData: FormData) {
   await requireUser();
-  const id = idSchema.safeParse(formData.get("slotId"));
-  if (id.success) {
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from("mentor_slots")
-      .update({ status: "cancelled" })
-      .eq("id", id.data)
-      .in("status", ["open", "booked"]);
-    if (error) console.error("cancel slot failed:", error.code);
+  const id = idSchema.safeParse(formData.get("ruleId"));
+  if (!id.success) redirect("/sessions?problem=1");
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("mentor_availability_rules")
+    .delete()
+    .eq("id", id.data);
+  if (error) {
+    log("remove rule", error.code);
+    redirect("/sessions?problem=1");
+  }
+  redirect("/sessions?ruleRemoved=1");
+}
+
+const REQUEST_FIELDS = ["slotId", "duration", "goal", "question1", "question2"] as const;
+
+/** A verified member asks for an open slot. */
+export async function requestSession(
+  _previous: MentorshipFormState,
+  formData: FormData,
+): Promise<MentorshipFormState> {
+  await requireUser();
+  const values = echo(formData, REQUEST_FIELDS);
+  const parsed = requestSchema.safeParse(raw(formData, REQUEST_FIELDS));
+  if (!parsed.success) return invalid(parsed.error, values);
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("mentorship_requests").insert(parsed.data);
+  if (error) {
+    log("request session", error.code);
+    return {
+      status: "error",
+      message: dbMessage(error.code, "We could not send your request. Nothing was sent. Try again."),
+      values,
+    };
+  }
+  redirect("/sessions?requested=1");
+}
+
+const RESPOND_FIELDS = ["requestId", "decision", "meetingUrl"] as const;
+
+/** A mentor accepts with a meeting link, or declines. */
+export async function respondRequest(
+  _previous: MentorshipFormState,
+  formData: FormData,
+): Promise<MentorshipFormState> {
+  await requireUser();
+  const values = echo(formData, RESPOND_FIELDS);
+  const parsed = respondSchema.safeParse(raw(formData, RESPOND_FIELDS));
+  if (!parsed.success) return invalid(parsed.error, values);
+
+  const answer = parsed.data;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("mentorship_requests")
+    .update(
+      answer.decision === "accept"
+        ? { status: "accepted", meeting_url: answer.meetingUrl }
+        : { status: "declined" },
+    )
+    .eq("id", answer.requestId)
+    .eq("status", "pending")
+    .select("id");
+
+  if (error || data.length === 0) {
+    log("respond request", error?.code);
+    return {
+      status: "error",
+      message: error
+        ? dbMessage(error.code, "We could not save your answer. Nothing changed. Try again.")
+        : "This request is no longer waiting for an answer. It may have expired or been cancelled.",
+      values,
+    };
+  }
+  redirect(`/sessions?${answer.decision === "accept" ? "accepted" : "declined"}=1`);
+}
+
+/** Either side cancels: a mentee a pending or accepted request, a mentor an accepted one. */
+export async function cancelRequest(formData: FormData) {
+  await requireUser();
+  const id = idSchema.safeParse(formData.get("requestId"));
+  if (!id.success) redirect("/sessions?problem=1");
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("mentorship_requests")
+    .update({ status: "cancelled" })
+    .eq("id", id.data)
+    .in("status", ["pending", "accepted"]);
+  if (error) {
+    log("cancel request", error.code);
+    redirect("/sessions?problem=1");
   }
   redirect("/sessions?cancelled=1");
 }
 
-/** A verified member books an open slot for themselves. */
-export async function bookSlot(
-  _previous: SessionFormState,
-  formData: FormData,
-): Promise<SessionFormState> {
-  const user = await requireUser();
-  const values = echo(formData, ["note"]);
+/** The mentor closes a finished session as completed or no-show. */
+export async function markOutcome(formData: FormData) {
+  await requireUser();
+  const parsed = outcomeSchema.safeParse({
+    sessionId: formData.get("sessionId"),
+    outcome: formData.get("outcome"),
+  });
+  if (!parsed.success) redirect("/sessions?problem=1");
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("sessions")
+    .update({ status: parsed.data.outcome })
+    .eq("id", parsed.data.sessionId)
+    .eq("status", "scheduled");
+  if (error) {
+    log("mark outcome", error.code);
+    redirect("/sessions?problem=1");
+  }
+  redirect("/sessions?closed=1");
+}
 
-  const id = idSchema.safeParse(formData.get("slotId"));
-  const note = bookingNoteSchema.safeParse(formData.get("note"));
-  if (!id.success) {
-    return {
-      status: "error",
-      message: "That slot could not be found.",
-      values,
-    };
-  }
-  if (!note.success) {
-    return {
-      status: "error",
-      fieldErrors: { note: note.error.issues.map((i) => i.message) },
-      values,
-    };
-  }
+const FEEDBACK_FIELDS = ["sessionId", "rating", "comment"] as const;
+
+/** Either person rates a completed session, once. */
+export async function submitFeedback(
+  _previous: MentorshipFormState,
+  formData: FormData,
+): Promise<MentorshipFormState> {
+  await requireUser();
+  const values = echo(formData, FEEDBACK_FIELDS);
+  const parsed = feedbackSchema.safeParse(raw(formData, FEEDBACK_FIELDS));
+  if (!parsed.success) return invalid(parsed.error, values);
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("mentor_slots")
-    .update({ status: "booked", booked_by: user.id, booker_note: note.data })
-    .eq("id", id.data)
-    .eq("status", "open")
-    .select("id");
-
+  const { error } = await supabase.from("session_feedback").insert(parsed.data);
   if (error) {
-    if (error.code === "54000") {
-      return {
-        status: "error",
-        message:
-          "You already have 3 upcoming sessions. Cancel one to book another.",
-        values,
-      };
-    }
-    if (error.code !== "42501") console.error("book slot failed:", error.code);
-    return {
-      status: "error",
-      message: "We could not book that slot. Try again, or pick another.",
-      values,
-    };
-  }
-
-  if (!data || data.length === 0) {
+    log("submit feedback", error.code);
     return {
       status: "error",
       message:
-        "Someone else just booked that slot, or it was cancelled. Pick another.",
+        error.code === "23505"
+          ? "You have already rated this session."
+          : dbMessage(error.code, "We could not save your rating. Nothing changed. Try again."),
       values,
     };
   }
-
-  redirect("/sessions?booked=1");
-}
-
-/** The person who booked gives the slot back. */
-export async function releaseBooking(formData: FormData) {
-  const user = await requireUser();
-  const id = idSchema.safeParse(formData.get("slotId"));
-  if (id.success) {
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from("mentor_slots")
-      .update({ status: "open", booked_by: null })
-      .eq("id", id.data)
-      .eq("booked_by", user.id)
-      .eq("status", "booked");
-    if (error) console.error("release booking failed:", error.code);
-  }
-  redirect("/sessions?released=1");
+  redirect("/sessions?rated=1");
 }
