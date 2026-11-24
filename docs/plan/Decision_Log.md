@@ -271,3 +271,15 @@ Alternatives considered: Email first (blocked on the sender); rows carrying a ti
 Trade-offs accepted: A member must open the app to see events. Notifications say "Someone applied to your job", not who; the name is on the job page.
 Source: IIUC_Connect_Master_File_v2, sections 7 and 8 (notifications and notification_preferences are in the plan; the preferences table is deferred).
 Status: Accepted. Proven by pgTAP file 007 (27 assertions) and e2e/notifications.py (17 checks).
+
+---
+
+Decision #: D-024
+Date: 2026-11-24
+Module: PWA
+Decision: Make the app installable with a web manifest and icons, and do not add a service worker. There is no offline mode and no cached pages.
+Rationale: The Master File asks for an installable PWA. A service worker that caches pages would keep signed-in content on a shared or lost phone after the member signs out, which conflicts with the privacy rules the project is built on. Installability on current mobile browsers does not depend on a service worker.
+Alternatives considered: A service worker caching static assets only (a small speed gain on repeat visits, more code to secure and to invalidate before the freeze); a full offline shell (needs a policy for what is safe to cache, no time).
+Trade-offs accepted: The installed app needs a connection and loads like the website. The claim "works on low bandwidth" rests on small pages and system fonts (D-017), not on caching, and must be measured separately.
+Source: MDN, Web app manifest; web.dev, Installation criteria. To be checked again against current browser behaviour before the report cites it.
+Status: Accepted. The manifest is unit-tested; an actual install on a phone is not yet tested.

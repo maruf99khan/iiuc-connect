@@ -1,0 +1,33 @@
+IIUC Connect — Installable app (PWA) verification record (plan day 28 Nov, part)
+Date: 2026-11-24
+Branch: sprint-6-mentorship (PR 1 is open and not merged)
+Built while the owner was away; nothing here needed their accounts or secrets.
+
+What was built
+  app/manifest.ts   served at /manifest.webmanifest: name and short name "IIUC Connect",
+                    start_url /dashboard, scope /, display standalone, theme colour
+                    #0f5132 (the page's own), icons 192 and 512 plus a maskable 512.
+  public/icons/     icon-192.png, icon-512.png (rounded), icon-maskable-512.png (full
+                    bleed, letters inside the 80% safe zone). app/apple-icon.png (180).
+  No service worker, by decision D-024: caching signed-in pages on a shared phone would
+  keep a member's data after they sign out. The app needs a connection to work.
+
+Checks run
+  npm test        248/248 (4 new in app/manifest.test.ts, written first and seen failing:
+                  name, start URL, theme colour, 192 and 512 icons, a maskable icon, and
+                  every icon file exists)
+  npm run lint, npm run typecheck   pass
+  Signed-out requests to the running dev server (no redirect followed):
+    /manifest.webmanifest 200 application/manifest+json
+    /icons/icon-192.png, icon-512.png, icon-maskable-512.png, /apple-icon.png  200 image/png
+  The home page links the manifest and the apple-touch-icon and carries the theme-color
+  meta tag. The icon was looked at (clear "IC" on the brand green).
+  python e2e/security_anon.py   all required headers present.
+
+Not verified
+  - That a phone actually offers "Install app" or "Add to Home screen" (needs a phone on
+    HTTPS, i.e. the deployed site; localhost is exempt in Chrome but nothing was tried).
+  - Lighthouse PWA and performance scores, Core Web Vitals, 3G throttling (the plan's
+    measured-performance claim is still to do, after the freeze).
+  - The maskable icon on a real Android launcher; iOS Add to Home Screen.
+  - Offline behaviour: none, by design.

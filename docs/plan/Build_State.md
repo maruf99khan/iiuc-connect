@@ -30,7 +30,7 @@ Accounts, verification, the member directory and the mentorship request flow are
 | 23–25 Nov | Mentorship end to end | Core done 24 Nov (rebuilt to the plan, D-018 to D-020); reminders and `.ics` not built |
 | 26 Nov | Jobs | Done 24 Nov: post, apply, shortlist or reject, withdraw, close, delete (D-022). No editing, search or notifications |
 | 27 Nov | Notifications, reminders, events | In-app notifications done 24 Nov (D-023). Email, reminders and events not started; they need the app's email sender |
-| 28 Nov | PWA, performance, security pass | Security headers done; the rest not started |
+| 28 Nov | PWA, performance, security pass | Security headers done. Installable manifest and icons done 24 Nov, no service worker (D-024). Performance measurement not started |
 | 29 Nov | Feature freeze, full test run, evaluation scripts | |
 | 30 Nov – 2 Dec | UAT with 10 participants | Participants not found yet |
 

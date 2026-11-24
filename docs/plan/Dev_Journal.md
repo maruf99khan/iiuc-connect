@@ -168,4 +168,6 @@ Lesson: a shared layout that reads per-member data is a rendering risk for every
 
 Not built, by decision (D-023): email, preferences, reminders.
 
-Next: PWA, performance and security pass (28 Nov); the remaining owner-only setup.
+Later the same evening: made the app installable (manifest, three icons, Apple icon), decision D-024, evidence `docs/evidence/2026-11-24_pwa_checks.txt`. No service worker on purpose. The manifest test was written first and seen failing; the files are served to signed-out visitors (the proxy does not redirect them). Not tested: an actual install on a phone.
+
+Next: performance measurement (Lighthouse, throttled network) and the rest of the security pass (28 Nov); the remaining owner-only setup.
