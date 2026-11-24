@@ -4,7 +4,7 @@ Updated: 2026-11-24 · Feature freeze: 29 Nov 2026 · Pre-defense: 5 December 20
 
 ## Today's position
 
-Accounts, verification, the member directory and the mentorship request flow are built and checked on Claude's side. Everything sits on stacked branches (`sprint-2-auth` through `sprint-6-mentorship`) in one open pull request into `main`; nothing has been merged. The pull request is not merge-ready until its CI run is green and the owner-only items below are done. Jobs, notifications and reminders are next; reminders and the calendar file need the project email sender.
+Accounts, verification, the member directory and the mentorship request flow are built and checked on Claude's side. Everything sits on stacked branches (`sprint-2-auth` through `sprint-6-mentorship`) in one open pull request into `main`; nothing has been merged. The pull request is not merge-ready until its CI run is green and the owner-only items below are done. The jobs board was built the same day, two days ahead of plan. Notifications and reminders are next; reminders and the calendar file need the project email sender.
 
 ## Key identifiers
 
@@ -15,7 +15,7 @@ Accounts, verification, the member directory and the mentorship request flow are
 | Supabase project | `iiuc-connect`, ref `zhogqnudiosaqihzvkiq`, Singapore, free plan; the development database (D-016), kept empty between runs |
 | Vercel project | `iiuc-connect`, id `prj_Pm4jRUeatW9D3bYDXO7DIi2Mj5wl`, team `maruf khan's projects` |
 | Framework | Next.js 16.4.6, React 19.3, Tailwind 4, Node 22+ |
-| Latest migration | `20261123200000_mentorship_jobs` |
+| Latest migration | `20261124100000_jobs` |
 | CI | GitHub Actions: `verify` (lint, typecheck, test, build) and `database` (all migrations, pgTAP). Supabase CLI pinned to 3.3.0 |
 
 ## Plan against actual (dates from Master File v2.1, section 12)
@@ -28,7 +28,7 @@ Accounts, verification, the member directory and the mentorship request flow are
 | 20 Nov | Admin queue, profile view and edit, privacy | Done |
 | 21–22 Nov | Directory, search, filters; identity tests | Done |
 | 23–25 Nov | Mentorship end to end | Core done 24 Nov (rebuilt to the plan, D-018 to D-020); reminders and `.ics` not built |
-| 26 Nov | Jobs | Not started |
+| 26 Nov | Jobs | Done 24 Nov: post, apply, shortlist or reject, withdraw, close, delete (D-022). No editing, search or notifications |
 | 27 Nov | Notifications, reminders, events | Not started; needs the project sender |
 | 28 Nov | PWA, performance, security pass | Security headers done; the rest not started |
 | 29 Nov | Feature freeze, full test run, evaluation scripts | |
@@ -38,13 +38,14 @@ Accounts, verification, the member directory and the mentorship request flow are
 
 - Database: identity, verification (state machine, append-only audit), directory, and mentorship (`mentor_profiles`, `mentor_availability_rules`, `mentor_slots`, `mentorship_requests`, `sessions`, `session_feedback`), with RLS, triggers, and pg_cron jobs for expiry and nightly slot generation.
 - App: sign-up and sign-in, password reset, onboarding, verification submit and admin review, profiles with privacy, directory with search and filters, mentorship screens at `/sessions` and `/members/[id]`.
-- Tests: 217 pgTAP assertions across four files (passing in CI), 226 unit tests, `e2e/*.py` Playwright scripts including `mentorship.py` (25 checks).
-- Evidence for each sprint in `docs/evidence/`; the latest is `2026-11-24_sprint6_checks.txt`.
+- Jobs board: `jobs` and `job_applications` with RLS, limits and status moves; screens at `/jobs`, `/jobs/new`, `/jobs/[id]`.
+- Tests: 274 pgTAP assertions across five files (217 in four files passed in CI; file 006, 57 assertions, passed on the hosted database and has not run in CI yet), 241 unit tests, `e2e/*.py` Playwright scripts including `mentorship.py` (25 checks) and `jobs.py` (22 checks).
+- Evidence for each sprint in `docs/evidence/`; the latest are `2026-11-24_sprint6_checks.txt` and `2026-11-24_jobs_checks.txt`.
 
 ## Next up
 
 1. Read the CI result of the pull request on the pinned CLI; do not merge until it is green and the owner-only items are done.
-2. Jobs (26 Nov), then notifications and reminders (27 Nov) once the sender exists.
+2. Notifications and reminders (27 Nov) once the sender exists; otherwise start the PWA, performance and security pass (28 Nov).
 3. Negative control for `005_mentorship.test.sql` (a deliberately broken policy must fail it).
 4. Citation audit of the v1 bibliography → `Bibliography.md`. Known wrong: A5 (Farrow and Yuan), M3 (Lall, Chen and Mason). Suspect: R2, A2, M1, M2. Trace problem-statement statistics to primary sources.
 

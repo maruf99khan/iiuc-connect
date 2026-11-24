@@ -1,0 +1,66 @@
+IIUC Connect — Jobs board verification record (plan day 26 Nov, built 24 Nov)
+Date: 2026-11-24
+Branch: sprint-6-mentorship (the jobs work sits on top of mentorship; PR 1 is open and
+not merged)
+
+Database (migration 20261124100000_jobs, applied to the hosted project)
+  Tables jobs and job_applications, enums job_type, job_status, application_status.
+  Poster: verified graduate only. Readers: verified members see active jobs; the
+  poster and admins see all of theirs. Applications: the applicant, the poster of the
+  job and admins can read; a verified member applies once per job to an active job
+  that is not their own; poster moves submitted -> shortlisted or rejected,
+  shortlisted -> rejected; applicant moves submitted or shortlisted -> withdrawn;
+  rejected and withdrawn are final (trigger, errcode 22023).
+  Limits, counted in AFTER triggers: 10 active jobs per poster, 20 live applications
+  per applicant (errcode 54000). Column grants: no one can set poster_id, applicant_id
+  or status on insert, or edit an applicant's message.
+  pgTAP supabase/tests/006_jobs.test.sql: 57/57 passed against the hosted schema
+  (one run, every TAP line printed), including cross-user denial, closed and deleted
+  jobs, and the two single-statement limit bypasses.
+  Negative control: with jobs_insert weakened to allow any signed-in member, the
+  "a student cannot post a job" assertion failed ("1 test failed of 1"), in a
+  rolled-back transaction.
+  Security advisors: 0 findings. Performance advisors: unchanged (the two INFO notes
+  already recorded for Sprint 6).
+  NOT yet run in CI (pushed after this record was written).
+
+Application (Windows 11)
+  npm run lint        pass
+  npm run typecheck   pass
+  npm test            241/241 (15 new: lib/jobs schemas, written before the code)
+  python e2e/security_anon.py   all headers present; jobs and job_applications
+        refused for signed-out visitors (401)
+  python e2e/jobs.py            22/22 checks passed against npm run dev and the hosted
+        database (three throwaway accounts: a graduate and two students), 375 px:
+        only graduates see Post a job; a student is told only graduates can post;
+        API: a student cannot post (403); a short title shows the field error;
+        posting redirects and confirms; the job is listed for a student; applying
+        confirms; API: a second application is refused (409); API: a student reads
+        only their own application; the poster sees both applicants and their
+        messages; shortlist and reject show to each applicant; withdraw works;
+        closing removes the job from the list and the page is not found by others;
+        reopening restores it; deleting confirms and removes the applications (API
+        shows none left); no uncaught page errors.
+  Layout: the main nav gained a fifth link, so it now wraps; no horizontal overflow
+  at 320 or 375 px on /jobs, /sessions and /jobs/new.
+  Screenshots (light and dark, 375 px) in e2e/shots/ (ignored by git).
+  Cleanup: the three accounts were deleted afterwards; auth.users, profiles, jobs and
+  job_applications all count 0.
+
+Problems found while building
+  1. The first e2e run had three failures, all in the script and not the app: a text
+     check read the page before the streamed content rendered (twice); a closed job
+     is shown as a not-found page with status 200 because Next streams it inside
+     Suspense, so the check now reads the page text; and "Delete this job" matched
+     the confirm button too, so the check targets the summary element.
+  2. The seeded run aborted once partway and left a job behind; it was removed before
+     the rerun, which started from an empty table.
+
+Not built or not verified
+  - Editing a job after posting (post, close, reopen and delete exist).
+  - Search or filters on the board (a flat list of the 50 newest active jobs).
+  - Email or in-app notification to a poster on a new application, or to an applicant
+    on a decision (needs the project sender, D-010, and the notifications work).
+  - CI result, a real phone, Safari on iOS, a screen reader.
+  - Applicant names are hidden from a poster when the applicant's profile is private
+    (shown as "A verified member"); not tested.

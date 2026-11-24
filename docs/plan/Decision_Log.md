@@ -247,3 +247,15 @@ Alternatives considered: Email OTP as planned (blocked on the sender); both (mor
 Trade-offs accepted: Deviates from the Master File without a prior decision, so this is logged late. Password reset exists and is tested; OTP does not.
 Source: Master File v2.1, authentication section.
 Status: Proposed. The supervisor and team should confirm or ask for OTP.
+
+---
+
+Decision #: D-022
+Date: 2026-11-24
+Module: Jobs
+Decision: Applications are made inside the app, as a short message to the poster, instead of a link to an external site. Only verified graduates post (at most 10 active jobs); any verified member except the poster applies once per job (at most 20 live applications). The poster sees the applicant's name and message and can shortlist or reject; the applicant can withdraw. This first version has no editing of a posted job, no search or filters, and no notifications.
+Rationale: The Master File's RLS matrix defines job_applications with statuses and poster-only visibility, and "post, apply, track" has nothing to track if applying happens elsewhere. Editing, search and notifications are the first things to drop under the freeze on 29 Nov; the board is a flat list of the 50 newest jobs.
+Alternatives considered: An external apply link only (nothing to track, no cross-user rules to prove); editing and filters now (time that the Must items still need).
+Trade-offs accepted: A poster gets no contact details, only the applicant's name and message; a poster who made a typo must close and repost. Applicants with a private profile show to the poster as "A verified member".
+Source: IIUC_Connect_Master_File_v2, sections 6 and 8.
+Status: Accepted. Proven by pgTAP file 006 (57 assertions) and e2e/jobs.py (22 checks).

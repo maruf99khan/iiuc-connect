@@ -30,7 +30,7 @@ with sync_playwright() as p:
     out("confirm bad",pg.request.get(B+"/auth/confirm?token_hash=x&type=email",max_redirects=0).status)
     out("confirm next evil",pg.request.get(B+"/auth/confirm?token_hash=x&type=email&next=//evil.com",max_redirects=0).headers.get("location"))
     # anon DB
-    for t in ["profiles","profile_private","verification_requests","verification_documents","verification_events","mentor_profiles","mentor_availability_rules","mentor_slots","mentorship_requests","sessions","session_feedback"]:
+    for t in ["profiles","profile_private","verification_requests","verification_documents","verification_events","mentor_profiles","mentor_availability_rules","mentor_slots","mentorship_requests","sessions","session_feedback","jobs","job_applications"]:
         out("anon select "+t,api(f"/rest/v1/{t}?select=*&limit=3"))
     out("anon rpc purge",api("/rest/v1/rpc/evidence_purge_candidates","POST",{"p_retention_days":0,"p_limit":5}))
     out("anon storage list",api("/storage/v1/object/list/verification-documents","POST",{"prefix":""}))

@@ -137,3 +137,19 @@ Evidence: `docs/evidence/2026-11-24_sprint6_checks.txt`.
 Lesson: Two of the three worst problems (3 and 6) were invisible until the tests ran somewhere other than where they were written. The hosted SQL tool and CI are different runners, so a test that passes in one needs one run in the other. The negative control was skipped for this file and is recorded as not done.
 
 Next: confirm CI on the pinned CLI; the owner-only setup (project sender, Confirm email, redirect URLs, cron secret); then Jobs and notifications if time allows. Feature freeze is 29 Nov.
+
+## 2026-11-24 — Day 8 (later) — Jobs board
+
+Built two days ahead of the plan (26 Nov), reusing the mentorship patterns: column grants, RLS, AFTER-trigger limits, and a rolled-back pgTAP file. Decision D-022. Evidence: `docs/evidence/2026-11-24_jobs_checks.txt`.
+
+| # | What happened | Cause | Fix | Cost |
+|---|---|---|---|---|
+| 1 | The jobs test passed 57 of 57 on its first run | Possible real result, possible weak tests | Weakened one policy in a rolled-back transaction and watched the matching assertion fail | Minutes |
+| 2 | Three e2e checks failed on the first run | Script bugs: read text before streamed content rendered (twice); expected a 404 status but Next streams a not-found page with status 200; a text match hit two elements | Wait for the text, check the page text, target the summary element | Two reruns |
+| 3 | Adding a fifth nav link left no room at 320 px | A flat row of links | Let the nav wrap; measured no overflow at 320 and 375 px | Minutes |
+
+Lesson: a test suite that passes completely on the first run needs one deliberate break before it earns trust. It took one small query here.
+
+Not built, by decision (D-022): editing a posted job, search, and notifications.
+
+Next: notifications and reminders (27 Nov), which need the project email sender; otherwise the PWA, performance and security pass.

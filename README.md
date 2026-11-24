@@ -147,6 +147,20 @@ A verified graduate sets weekly availability; a verified member requests a time;
 - A private graduate's slots cannot be requested. The meeting link is visible only to the two people in the session.
 - No email, reminder or calendar file is sent yet (needs the project sender, D-010).
 
+## Jobs board
+
+Verified graduates post jobs; verified members apply inside the app and track the answer.
+
+| Route | Who | What it does |
+|---|---|---|
+| `/jobs` | Members | Open jobs, your applications (with Withdraw), and the jobs you posted |
+| `/jobs/new` | Verified graduates | Post a job: title, company, location, type, description |
+| `/jobs/[id]` | Members | The job; members apply with an optional message; the poster closes, reopens or deletes it and shortlists or rejects each applicant |
+
+- Limits, enforced by the database: 10 active jobs per graduate and 20 live applications per member, counted after the statement so one request cannot add many rows at once. One application per member per job.
+- A closed job disappears for everyone but its poster and admins. Deleting a job deletes its applications. Rejected and withdrawn applications cannot be reopened.
+- Not built yet: editing a posted job, search and filters, notifications (see D-022).
+
 ## Security model
 
 Authorization is enforced in the database with Row Level Security. The app only ever talks to the database with the signed-in user's session and the publishable key, so the UI cannot grant access the database would refuse.
@@ -161,7 +175,7 @@ Authorization is enforced in the database with Row Level Security. The app only 
 
 - `e2e/security_anon.py` needs no accounts: signed-out redirects, redirect-target abuse, security headers, anonymous database and storage access, narrow-screen overflow. Exits non-zero if a header is missing.
 - `e2e/security_member.py` signs up a throwaway member (`audit-user@example.com`), tries privilege escalation and script injection, and leaves the account behind; delete it afterwards in the dashboard or with `delete from auth.users where email = 'audit-user@example.com'`.
-- `auth`, `signup`, `verify`, `directory`, `recovery` and `mentorship` are the per-sprint flows. Some need synthetic accounts seeded first (see the top of each file) and "Confirm email" turned off. `mentorship.py` also pauses twice (`expiry`, `session`) and names a marker file; run the matching SQL from the docstring at the top of the script, then create that file. Delete the four `e2e-*@example.com` accounts afterwards.
+- `auth`, `signup`, `verify`, `directory`, `recovery`, `mentorship` and `jobs` are the per-sprint flows (`jobs.py` needs three seeded accounts and no SQL by hand). Some need synthetic accounts seeded first (see the top of each file) and "Confirm email" turned off. `mentorship.py` also pauses twice (`expiry`, `session`) and names a marker file; run the matching SQL from the docstring at the top of the script, then create that file. Delete the four `e2e-*@example.com` accounts afterwards.
 
 Security headers (`lib/security-headers.ts`) are unit-tested. The content security policy has no `script-src` yet; see the comment in that file.
 
