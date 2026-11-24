@@ -7,11 +7,11 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/session";
 import { memberLine, workLine } from "@/lib/directory/format";
 import { isLinkedInUrl } from "@/lib/profile/schema";
-import { formatDhaka } from "@/lib/sessions/slot";
+import { formatDhaka } from "@/lib/mentorship/time";
 import { createClient } from "@/lib/supabase/server";
 import { isVerified } from "@/lib/verification/status";
 
-import { BookSlotForm } from "../../sessions/book-form";
+import { RequestForm } from "./request-form";
 
 export const metadata: Metadata = { title: "Member" };
 
@@ -66,18 +66,26 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
       : null;
   const work = workLine(member);
 
-  // Open slots of a graduate, for another verified member to book. Row Level
-  // Security already hides a private mentor's slots and anyone else's bookings.
-  const { data: slots } =
+  // A graduate's mentor settings and open times, for another verified member to
+  // request. Row Level Security already hides a private mentor's slots.
+  const { data: mentor } =
     member.affiliation === "alumni" && verified && !own
       ? await supabase
-          .from("mentor_slots")
-          .select("id, starts_at, duration_minutes, topic")
-          .eq("mentor_id", id)
-          .eq("status", "open")
-          .gt("starts_at", new Date().toISOString())
-          .order("starts_at")
+          .from("mentor_profiles")
+          .select("accepting_requests, expertise_areas, max_sessions_per_week")
+          .eq("id", id)
+          .maybeSingle()
       : { data: null };
+  const { data: slots } = mentor?.accepting_requests
+    ? await supabase
+        .from("mentor_slots")
+        .select("id, starts_at")
+        .eq("mentor_id", id)
+        .eq("status", "open")
+        .gt("starts_at", new Date().toISOString())
+        .order("starts_at")
+        .limit(40)
+    : { data: null };
 
   return (
     <>
@@ -156,23 +164,37 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
         </a>
       ) : null}
 
-      {slots && slots.length > 0 ? (
-        <section aria-labelledby="book-heading" className="flex flex-col gap-4">
-          <h2 id="book-heading" className="text-lg font-semibold">
-            Book a session
+      {mentor ? (
+        <section aria-labelledby="request-heading" className="flex flex-col gap-4">
+          <h2 id="request-heading" className="text-lg font-semibold">
+            Request a session
           </h2>
-          <p className="text-sm text-muted">All times are Bangladesh time.</p>
-          <ul className="flex flex-col divide-y divide-border border-y border-border">
-            {slots.map((slot) => (
-              <li key={slot.id} className="flex flex-col gap-3 py-5">
-                <p className="font-semibold">{formatDhaka(slot.starts_at)}</p>
-                <p>
-                  {slot.topic} · {slot.duration_minutes} minutes
-                </p>
-                <BookSlotForm slotId={slot.id} />
-              </li>
-            ))}
-          </ul>
+          {!mentor.accepting_requests ? (
+            <p className="text-muted">This graduate is not taking requests right now.</p>
+          ) : slots && slots.length > 0 ? (
+            <>
+              <p className="text-sm text-muted">
+                All times are Bangladesh time. The graduate has 72 hours to answer.
+              </p>
+              <ul className="flex flex-col divide-y divide-border border-y border-border">
+                {slots.map((slot) => (
+                  <li key={slot.id} className="flex flex-col gap-3 py-4">
+                    <p className="font-semibold">{formatDhaka(slot.starts_at)}</p>
+                    <details className="flex flex-col gap-3">
+                      <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">
+                        Request this time
+                      </summary>
+                      <div className="pt-3">
+                        <RequestForm slotId={slot.id} />
+                      </div>
+                    </details>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="text-muted">No open times right now. Check again soon.</p>
+          )}
         </section>
       ) : null}
 
