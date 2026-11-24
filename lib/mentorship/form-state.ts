@@ -1,15 +1,28 @@
-/** Shared by the session forms and the server actions behind them. */
-export type SessionField =
-  | "startsAt"
+/** Shared by the mentorship forms and the server actions behind them. */
+export type MentorshipField =
+  | "weekday"
+  | "startTime"
+  | "endTime"
+  | "expertiseAreas"
+  | "bio"
+  | "maxSessions"
+  | "accepting"
+  | "slotId"
   | "duration"
-  | "topic"
+  | "goal"
+  | "question1"
+  | "question2"
+  | "requestId"
+  | "decision"
   | "meetingUrl"
-  | "note";
+  | "sessionId"
+  | "rating"
+  | "comment";
 
-export type SessionFormState = {
+export type MentorshipFormState = {
   status: "idle" | "error";
   message?: string;
-  fieldErrors?: Partial<Record<SessionField, string[]>>;
+  fieldErrors?: Partial<Record<MentorshipField, string[]>>;
   /** What the member typed, so a failed attempt does not wipe the form. */
-  values?: Partial<Record<SessionField, string>>;
+  values?: Partial<Record<MentorshipField, string>>;
 };
