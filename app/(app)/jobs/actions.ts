@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth/session";
+import { checkCv, cvPath } from "@/lib/jobs/cv";
 import type { JobField, JobFormState } from "@/lib/jobs/form-state";
 import { applySchema, decisionSchema, jobSchema } from "@/lib/jobs/schemas";
 import { createClient } from "@/lib/supabase/server";
@@ -88,19 +89,68 @@ export async function postJob(
 }
 
 const APPLY_FIELDS = ["jobId", "message"] as const;
+const CV_BUCKET = "application-cvs";
 
-/** A verified member applies to a job, once. */
+/** A verified member applies to a job, once, with an optional PDF CV. */
 export async function applyToJob(
   _previous: JobFormState,
   formData: FormData,
 ): Promise<JobFormState> {
-  await requireUser();
+  const user = await requireUser();
   const values = echo(formData, APPLY_FIELDS);
   const parsed = applySchema.safeParse(raw(formData, APPLY_FIELDS));
-  if (!parsed.success) return invalid(parsed.error, values);
+  const fieldErrors: NonNullable<JobFormState["fieldErrors"]> = parsed.success
+    ? {}
+    : (z.flattenError(parsed.error).fieldErrors as NonNullable<JobFormState["fieldErrors"]>);
+
+  // The CV is optional. A chosen file is judged by its content, not by the name
+  // or type the browser reports.
+  const file = formData.get("cv");
+  const upload = file instanceof File && file.size > 0 ? file : null;
+  if (upload) {
+    const head = new Uint8Array(await upload.slice(0, 16).arrayBuffer());
+    const check = checkCv(upload.size, head);
+    if (!check.ok) fieldErrors.cv = [check.message];
+  }
+
+  if (!parsed.success || Object.keys(fieldErrors).length > 0) {
+    return {
+      status: "error",
+      message: "Some details need fixing. Check the fields marked below.",
+      fieldErrors,
+      values,
+    };
+  }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("job_applications").insert(parsed.data);
+
+  // Upload first, then save the application, so an application never points at
+  // a file that is not there. If saving fails after the upload, the file is left
+  // with no application and the daily cleanup removes it.
+  const applicationId = crypto.randomUUID();
+  let path: string | null = null;
+  if (upload) {
+    path = cvPath(user.id, applicationId);
+    const { error: uploadError } = await supabase.storage
+      .from(CV_BUCKET)
+      .upload(path, await upload.arrayBuffer(), {
+        contentType: "application/pdf",
+        upsert: false,
+      });
+    if (uploadError) {
+      console.error("apply to job: could not upload the CV:", uploadError.message);
+      return {
+        status: "error",
+        message:
+          "We could not upload your CV, so nothing was sent. Choose the file again and try again.",
+        values,
+      };
+    }
+  }
+
+  const { error } = await supabase
+    .from("job_applications")
+    .insert({ id: applicationId, ...parsed.data, cv_path: path });
   if (error) {
     log("apply to job", error.code);
     return {

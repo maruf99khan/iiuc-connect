@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           applicant_id: string
           created_at: string
+          cv_path: string | null
           id: string
           job_id: string
           message: string | null
@@ -27,6 +28,7 @@ export type Database = {
         Insert: {
           applicant_id?: string
           created_at?: string
+          cv_path?: string | null
           id?: string
           job_id: string
           message?: string | null
@@ -36,6 +38,7 @@ export type Database = {
         Update: {
           applicant_id?: string
           created_at?: string
+          cv_path?: string | null
           id?: string
           job_id?: string
           message?: string | null
@@ -477,6 +480,7 @@ export type Database = {
           created_at: string
           department: string | null
           full_name: string
+          github_url: string | null
           graduation_year: number | null
           headline: string | null
           id: string
@@ -485,6 +489,7 @@ export type Database = {
           linkedin_url: string | null
           location: string | null
           onboarded_at: string | null
+          portfolio_url: string | null
           reputation_score: number
           role: Database["public"]["Enums"]["user_role"]
           search_text: string
@@ -502,6 +507,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           full_name?: string
+          github_url?: string | null
           graduation_year?: number | null
           headline?: string | null
           id: string
@@ -510,6 +516,7 @@ export type Database = {
           linkedin_url?: string | null
           location?: string | null
           onboarded_at?: string | null
+          portfolio_url?: string | null
           reputation_score?: number
           role?: Database["public"]["Enums"]["user_role"]
           search_text?: string
@@ -527,6 +534,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           full_name?: string
+          github_url?: string | null
           graduation_year?: number | null
           headline?: string | null
           id?: string
@@ -535,6 +543,7 @@ export type Database = {
           linkedin_url?: string | null
           location?: string | null
           onboarded_at?: string | null
+          portfolio_url?: string | null
           reputation_score?: number
           role?: Database["public"]["Enums"]["user_role"]
           search_text?: string
@@ -709,6 +718,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cv_purge_candidates: {
+        Args: { p_limit?: number }
+        Returns: {
+          path: string
+          reason: string
+        }[]
+      }
       evidence_purge_candidates: {
         Args: { p_limit?: number; p_retention_days?: number }
         Returns: {

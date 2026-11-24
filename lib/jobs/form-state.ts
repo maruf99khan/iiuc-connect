@@ -6,7 +6,8 @@ export type JobField =
   | "jobType"
   | "description"
   | "jobId"
-  | "message";
+  | "message"
+  | "cv";
 
 export type JobFormState = {
   status: "idle" | "error";

@@ -30,7 +30,7 @@ async function Editor({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, full_name, headline, bio, job_title, company, location, industry, skills, linkedin_url, visibility, verification_status, affiliation, department, batch, graduation_year, updated_at",
+      "id, full_name, headline, bio, job_title, company, location, industry, skills, linkedin_url, portfolio_url, github_url, visibility, verification_status, affiliation, department, batch, graduation_year, updated_at",
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -94,6 +94,8 @@ async function Editor({
           industry: profile.industry ?? "",
           skills: profile.skills.join(", "),
           linkedinUrl: profile.linkedin_url ?? "",
+          portfolioUrl: profile.portfolio_url ?? "",
+          githubUrl: profile.github_url ?? "",
           visibility: profile.visibility,
         }}
       />

@@ -34,6 +34,8 @@ with sync_playwright() as p:
         out("anon select "+t,api(f"/rest/v1/{t}?select=*&limit=3"))
     out("anon rpc purge",api("/rest/v1/rpc/evidence_purge_candidates","POST",{"p_retention_days":0,"p_limit":5}))
     out("anon storage list",api("/storage/v1/object/list/verification-documents","POST",{"prefix":""}))
+    out("anon rpc cv purge",api("/rest/v1/rpc/cv_purge_candidates","POST",{"p_limit":5}))
+    out("anon storage list cvs",api("/storage/v1/object/list/application-cvs","POST",{"prefix":""}))
     # a11y/overflow on public pages at 320
     c2=b.new_context(viewport={"width":320,"height":640}); q=c2.new_page()
     for path in ["/","/sign-in","/sign-up","/forgot-password"]:

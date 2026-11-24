@@ -78,6 +78,47 @@ export function isLinkedInUrl(value: string): boolean {
   }
 }
 
+/** An https address with no spaces, credentials, or script scheme, at most 300 characters. */
+function parseHttpsUrl(value: string): URL | null {
+  if (value.length > 300 || /\s/.test(value)) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username !== "" || url.password !== "") {
+      return null;
+    }
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A portfolio may be on any host, but only over https and with no embedded
+ * credentials, so https://github.com@evil.example/ cannot pass as GitHub.
+ * The database applies the same rules (profiles_portfolio_url_format).
+ */
+export function isPortfolioUrl(value: string): boolean {
+  return parseHttpsUrl(value) !== null;
+}
+
+/** github.com or www.github.com only, with no credentials or port. */
+export function isGithubUrl(value: string): boolean {
+  const url = parseHttpsUrl(value);
+  return (
+    url !== null &&
+    url.port === "" &&
+    (url.hostname === "github.com" || url.hostname === "www.github.com")
+  );
+}
+
+const optionalUrl = (check: (value: string) => boolean, error: string) =>
+  z
+    .string()
+    .trim()
+    .nullish()
+    .transform((value) => value || null)
+    .refine((value) => value === null || check(value), { error });
+
 export const fullNameSchema = z
   .string({ error: "Enter your full name." })
   .trim()
@@ -111,6 +152,14 @@ export const profileSchema = z
       .refine((value) => value === null || isLinkedInUrl(value), {
         error: "Use your LinkedIn address, starting with https://linkedin.com/",
       }),
+    portfolioUrl: optionalUrl(
+      isPortfolioUrl,
+      "Use a full address starting with https://",
+    ),
+    githubUrl: optionalUrl(
+      isGithubUrl,
+      "Use your GitHub address, starting with https://github.com/",
+    ),
     visibility: z.enum(VISIBILITY_OPTIONS, {
       error: "Choose who can see your profile.",
     }),
@@ -124,6 +173,8 @@ export const profileSchema = z
     industry: profile.industry,
     skills: profile.skills,
     linkedin_url: profile.linkedinUrl,
+    portfolio_url: profile.portfolioUrl,
+    github_url: profile.githubUrl,
     visibility: profile.visibility,
   }));
 

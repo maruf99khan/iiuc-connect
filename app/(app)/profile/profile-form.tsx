@@ -23,6 +23,8 @@ export type ProfileValues = {
   industry: string;
   skills: string;
   linkedinUrl: string;
+  portfolioUrl: string;
+  githubUrl: string;
   visibility: (typeof VISIBILITY_OPTIONS)[number];
 };
 
@@ -187,6 +189,44 @@ export function ProfileForm({
           spellCheck={false}
           defaultValue={value("linkedinUrl")}
           {...aria(`${id}-li`, errors.linkedinUrl?.[0], true)}
+          className="field"
+        />
+      </Field>
+
+      <Field
+        id={`${id}-gh`}
+        label="GitHub address"
+        hint="Optional. Starts with https://github.com/"
+        error={errors.githubUrl?.[0]}
+      >
+        <input
+          id={`${id}-gh`}
+          name="githubUrl"
+          type="url"
+          maxLength={300}
+          autoComplete="off"
+          spellCheck={false}
+          defaultValue={value("githubUrl")}
+          {...aria(`${id}-gh`, errors.githubUrl?.[0], true)}
+          className="field"
+        />
+      </Field>
+
+      <Field
+        id={`${id}-pf`}
+        label="Portfolio or personal site"
+        hint="Optional. A full address starting with https://. Job posters can open it from your profile."
+        error={errors.portfolioUrl?.[0]}
+      >
+        <input
+          id={`${id}-pf`}
+          name="portfolioUrl"
+          type="url"
+          maxLength={300}
+          autoComplete="off"
+          spellCheck={false}
+          defaultValue={value("portfolioUrl")}
+          {...aria(`${id}-pf`, errors.portfolioUrl?.[0], true)}
           className="field"
         />
       </Field>

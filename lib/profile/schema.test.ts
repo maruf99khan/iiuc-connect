@@ -16,6 +16,8 @@ const base = {
   industry: "Software",
   skills: "Python, React",
   linkedinUrl: "https://www.linkedin.com/in/rahim",
+  portfolioUrl: "https://rahim.dev/work",
+  githubUrl: "https://github.com/rahim",
   visibility: "iiuc_community",
 };
 
@@ -59,6 +61,8 @@ describe("profileSchema", () => {
       industry: "Software",
       skills: ["Python", "React"],
       linkedin_url: "https://www.linkedin.com/in/rahim",
+      portfolio_url: "https://rahim.dev/work",
+      github_url: "https://github.com/rahim",
       visibility: "iiuc_community",
     });
   });
@@ -72,6 +76,8 @@ describe("profileSchema", () => {
     expect(parsed.headline).toBeNull();
     expect(parsed.bio).toBeNull();
     expect(parsed.linkedin_url).toBeNull();
+    expect(parsed.portfolio_url).toBeNull();
+    expect(parsed.github_url).toBeNull();
     expect(parsed.skills).toEqual([]);
   });
 
@@ -141,6 +147,55 @@ describe("profileSchema", () => {
     expect(profileSchema.safeParse({ ...base, linkedinUrl }).success).toBe(
       false,
     );
+  });
+
+  it.each([
+    "https://rahim.dev",
+    "https://rahim.dev/work?tab=2#top",
+    "https://sub.example.com:8443/x",
+    "https://github.com/rahim/portfolio",
+  ])("accepts the portfolio address %s", (portfolioUrl) => {
+    expect(profileSchema.safeParse({ ...base, portfolioUrl }).success).toBe(true);
+  });
+
+  it.each([
+    ["not https", "http://rahim.dev"],
+    ["a script", "javascript:alert(1)"],
+    ["a data address", "data:text/html,<b>hi</b>"],
+    ["no scheme", "rahim.dev"],
+    ["a space in the host", "https://exa mple.com/x"],
+    ["a user-info trick", "https://github.com@evil.example/"],
+    ["credentials", "https://user:pass@example.com/"],
+    ["too long", `https://example.com/${"a".repeat(300)}`],
+  ])("rejects a portfolio address that is %s", (_label, portfolioUrl) => {
+    expect(profileSchema.safeParse({ ...base, portfolioUrl }).success).toBe(false);
+  });
+
+  it.each([
+    "https://github.com/rahim",
+    "https://www.github.com/rahim",
+    "https://github.com",
+    "https://github.com/rahim?tab=repositories",
+  ])("accepts the GitHub address %s", (githubUrl) => {
+    expect(profileSchema.safeParse({ ...base, githubUrl }).success).toBe(true);
+  });
+
+  it.each([
+    ["not https", "http://github.com/rahim"],
+    ["another site", "https://gitlab.com/rahim"],
+    ["a look-alike host", "https://github.com.evil.example/rahim"],
+    ["a look-alike prefix", "https://notgithub.com/rahim"],
+    ["a subdomain that is not www", "https://gist.github.com/rahim"],
+    ["a user-info trick", "https://github.com@evil.example/"],
+    ["a script", "javascript:alert(1)"],
+  ])("rejects a GitHub address that is %s", (_label, githubUrl) => {
+    expect(profileSchema.safeParse({ ...base, githubUrl }).success).toBe(false);
+  });
+
+  it("treats blank portfolio and GitHub fields as none", () => {
+    const parsed = profileSchema.parse({ ...base, portfolioUrl: "  ", githubUrl: "" });
+    expect(parsed.portfolio_url).toBeNull();
+    expect(parsed.github_url).toBeNull();
   });
 
   it("rejects an unknown visibility", () => {

@@ -9,6 +9,8 @@ export type ProfileField =
   | "industry"
   | "skills"
   | "linkedinUrl"
+  | "portfolioUrl"
+  | "githubUrl"
   | "visibility";
 
 export type ProfileFormState = {

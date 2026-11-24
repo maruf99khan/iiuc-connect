@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth/session";
 import { memberLine, workLine } from "@/lib/directory/format";
-import { isLinkedInUrl } from "@/lib/profile/schema";
+import { isGithubUrl, isLinkedInUrl, isPortfolioUrl } from "@/lib/profile/schema";
 import { formatDhaka } from "@/lib/mentorship/time";
 import { createClient } from "@/lib/supabase/server";
 import { isVerified } from "@/lib/verification/status";
@@ -33,7 +33,7 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
     supabase
       .from("profiles")
       .select(
-        "id, full_name, headline, bio, job_title, company, location, industry, department, batch, graduation_year, affiliation, skills, linkedin_url, visibility, verification_status",
+        "id, full_name, headline, bio, job_title, company, location, industry, department, batch, graduation_year, affiliation, skills, linkedin_url, portfolio_url, github_url, visibility, verification_status",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -63,6 +63,12 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
   const linkedin =
     member.linkedin_url && isLinkedInUrl(member.linkedin_url)
       ? member.linkedin_url
+      : null;
+  const github =
+    member.github_url && isGithubUrl(member.github_url) ? member.github_url : null;
+  const portfolio =
+    member.portfolio_url && isPortfolioUrl(member.portfolio_url)
+      ? member.portfolio_url
       : null;
   const work = workLine(member);
 
@@ -153,15 +159,30 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
         </section>
       ) : null}
 
-      {linkedin ? (
-        <a
-          href={linkedin}
-          target="_blank"
-          rel="noopener noreferrer nofollow"
-          className="self-start"
-        >
-          LinkedIn profile (opens in a new tab)
-        </a>
+      {linkedin || github || portfolio ? (
+        <ul className="flex flex-col gap-2">
+          {linkedin ? (
+            <li>
+              <a href={linkedin} target="_blank" rel="noopener noreferrer nofollow">
+                LinkedIn profile (opens in a new tab)
+              </a>
+            </li>
+          ) : null}
+          {github ? (
+            <li>
+              <a href={github} target="_blank" rel="noopener noreferrer nofollow">
+                GitHub profile (opens in a new tab)
+              </a>
+            </li>
+          ) : null}
+          {portfolio ? (
+            <li>
+              <a href={portfolio} target="_blank" rel="noopener noreferrer nofollow">
+                Portfolio or personal site (opens in a new tab)
+              </a>
+            </li>
+          ) : null}
+        </ul>
       ) : null}
 
       {mentor ? (

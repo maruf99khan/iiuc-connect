@@ -19,6 +19,8 @@ const FIELDS = [
   "industry",
   "skills",
   "linkedinUrl",
+  "portfolioUrl",
+  "githubUrl",
   "visibility",
 ] as const;
 

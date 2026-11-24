@@ -3,6 +3,10 @@
 Seed first (see README "Browser checks"): e2e-poster, e2e-student1 and e2e-student2
 @example.com, verified (the poster as a graduate named "Pia Poster", the students
 "Sid Student" and "Sue Student"). Nothing here needs SQL by hand.
+
+Also covers application CVs (D-025): file checks, who can open a CV, and access ending
+on withdrawal. The run uploads one real test PDF to the application-cvs bucket; deleting
+the job orphans it, so remove it in the dashboard or let the daily purge do it.
 """
 import json
 import pathlib
@@ -84,6 +88,31 @@ def open_job(page, job_id):
     page.wait_for_timeout(1000)
 
 
+PDF = b"%PDF-1.4\n%e2e test CV\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
+
+
+def cv_file(buffer=PDF, name="cv.pdf"):
+    return {"name": name, "mimeType": "application/pdf", "buffer": buffer}
+
+
+def storage_status(token, path):
+    """Status and first bytes of a direct Storage API read as this member."""
+    req = urllib.request.Request(
+        f"{SB_URL}/storage/v1/object/authenticated/application-cvs/{path}",
+        headers={"apikey": SB_KEY, "Authorization": f"Bearer {token}"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return r.status, r.read(5)
+    except urllib.error.HTTPError as e:
+        return e.code, b""
+
+
+def cv_route(page, job_id, app_id):
+    """The CV link as a signed-in browser follows it, one hop at a time."""
+    return page.context.request.get(f"{BASE}/jobs/{job_id}/cv/{app_id}", max_redirects=0)
+
+
 with sync_playwright() as p:
     browser = p.chromium.launch()
     errors = []
@@ -136,13 +165,39 @@ with sync_playwright() as p:
     check("a verified student sees the job in the list", TITLE in open_section, open_section[:80].replace("\n", " "))
     a.screenshot(path=str(OUT / "jobs-list-mobile-light.png"), full_page=True)
     open_job(a, job_id)
+    # CV checks happen on the server, by content: a text file named .pdf, then a file over 2 MB.
     a.get_by_label("A short message (optional)").fill("I would love to join.")
+    a.get_by_label("A CV (optional)").set_input_files(cv_file(b"this is not a pdf", "cv.pdf"))
+    a.get_by_role("button", name="Apply to this job").click()
+    a.get_by_text("Upload your CV as a PDF file.").wait_for(timeout=20000)
+    check("a file that is not a PDF is refused, whatever its name says", True)
+    a.get_by_label("A CV (optional)").set_input_files(cv_file(b"%PDF-1.4\n" + b"0" * (2 * 1024 * 1024), "big.pdf"))
+    a.get_by_role("button", name="Apply to this job").click()
+    a.get_by_text("The CV is larger than 2 MB.").wait_for(timeout=30000)
+    check("a PDF over 2 MB is refused", True)
+    s, none_yet = api("GET", "/rest/v1/job_applications?select=id", token_for(S1))
+    check("API: the refused attempts created no application", s == 200 and none_yet == [], str(none_yet))
+    a.get_by_label("A short message (optional)").fill("I would love to join.")
+    a.get_by_label("A CV (optional)").set_input_files(cv_file())
     a.get_by_role("button", name="Apply to this job").click()
     a.wait_for_url(re.compile(r"applied=1"), timeout=30000)
     check("applying confirms and shows the application status", "Application sent." in a.inner_text("main") and "Your application:" in a.inner_text("main"))
     check("the apply form is gone after applying", a.get_by_role("button", name="Apply to this job").count() == 0)
     s, dup = api("POST", "/rest/v1/job_applications", s1token, {"job_id": job_id})
     check("API: a second application to the same job is refused", s == 409, str(s))
+
+    # 3b. Profile links: validation, then saved and shown to the poster who clicks through
+    a.goto(f"{BASE}/profile")
+    a.get_by_label("GitHub address").wait_for(timeout=30000)
+    a.get_by_label("GitHub address").fill("https://gitlab.com/sid")
+    a.get_by_role("button", name="Save profile").click()
+    a.get_by_text("Use your GitHub address, starting with https://github.com/").wait_for(timeout=20000)
+    check("a GitHub address on another site shows the field error", True)
+    a.get_by_label("GitHub address").fill("https://github.com/sid-student")
+    a.get_by_label("Portfolio or personal site").fill("https://sid.example.com/work")
+    a.get_by_role("button", name="Save profile").click()
+    a.wait_for_url(re.compile(r"saved=1"), timeout=30000)
+    check("valid GitHub and portfolio addresses are saved", a.get_by_label("GitHub address").input_value() == "https://github.com/sid-student" and a.get_by_label("Portfolio or personal site").input_value() == "https://sid.example.com/work")
 
     # 4. Second student; poster sees both; students see only their own
     b = new_ctx()
@@ -159,6 +214,43 @@ with sync_playwright() as p:
     check("the poster sees both applicants and their messages", "Sid Student" in body and "Sue Student" in body and "I would love to join." in body and "Please consider me." in body)
     po.screenshot(path=str(OUT / "jobs-detail-poster-mobile-light.png"), full_page=True)
 
+    # 4b. Application CVs: who can open one
+    s, m1 = api("GET", "/rest/v1/job_applications?select=id,cv_path", s1token)
+    app1, cv1 = m1[0]["id"], m1[0]["cv_path"]
+    s, m2 = api("GET", "/rest/v1/job_applications?select=id,cv_path", s2token)
+    app2 = m2[0]["id"]
+    check("API: the CV path is the applicant's folder and the application id", bool(re.fullmatch(r"[0-9a-f-]{36}/" + re.escape(app1) + r"\.pdf", cv1 or "")), str(cv1))
+    check("API: an application without a CV has no path", m2[0]["cv_path"] is None)
+    check("the poster sees Open CV for the applicant who attached one and No CV attached for the other", body.count("Open CV (PDF") == 1 and body.count("No CV attached.") == 1)
+    link = po.get_by_role("link", name="Sid Student")
+    check("the applicant's name is a link to their profile", link.count() == 1 and "/members/" in (link.get_attribute("href") or ""))
+    link.click()
+    po.wait_for_url(re.compile(r"/members/[0-9a-f-]{36}"), timeout=30000)
+    po.get_by_role("heading", level=1, name="Sid Student").wait_for(timeout=30000)
+    gh = po.get_by_role("link", name="GitHub profile (opens in a new tab)")
+    pf = po.get_by_role("link", name="Portfolio or personal site (opens in a new tab)")
+    check("the poster sees the applicant's GitHub and portfolio links, opening safely", gh.get_attribute("href") == "https://github.com/sid-student" and pf.get_attribute("href") == "https://sid.example.com/work" and "noopener" in (gh.get_attribute("rel") or ""))
+    open_job(po, job_id)
+    r = cv_route(po, job_id, app1)
+    loc = r.headers.get("location", "")
+    check("the poster is sent to a signed link for the CV", r.status in (302, 303, 307, 308) and "/storage/v1/object/sign/application-cvs/" in loc, f"{r.status} {loc[:60]}")
+    got = po.context.request.get(loc)
+    check("the signed link returns the PDF", got.status == 200 and got.body()[:5] == b"%PDF-", str(got.status))
+    r = cv_route(a, job_id, app1)
+    check("the applicant can open their own CV", r.status in (302, 303, 307, 308), str(r.status))
+    r = cv_route(b, job_id, app1)
+    check("another applicant cannot open it (404)", r.status == 404, str(r.status))
+    r = cv_route(b, job_id, app2)
+    check("an application with no CV gives 404", r.status == 404, str(r.status))
+    anon = browser.new_context()
+    r = anon.request.get(f"{BASE}/jobs/{job_id}/cv/{app1}", max_redirects=0)
+    check("a signed-out visitor is sent to sign in, not to the file", r.status in (302, 303, 307, 308) and "sign-in" in r.headers.get("location", ""), f"{r.status} {r.headers.get('location', '')[:50]}")
+    anon.close()
+    st, head = storage_status(token_for(POSTER), cv1)
+    check("API: the poster can read the file directly", st == 200 and head == b"%PDF-", str(st))
+    st, head = storage_status(s2token, cv1)
+    check("API: another member cannot read the file directly", st != 200, str(st))
+
     # 5. Shortlist and reject
     po.locator("li").filter(has_text="Sid Student").get_by_role("button", name="Shortlist").click()
     po.wait_for_url(re.compile(r"decided=1"), timeout=30000)
@@ -173,6 +265,14 @@ with sync_playwright() as p:
     a.get_by_role("button", name="Withdraw").click()
     a.wait_for_url(re.compile(r"withdrawn=1"), timeout=30000)
     check("withdrawing confirms and shows Withdrawn", "Application withdrawn." in a.inner_text("main") and "Withdrawn" in a.inner_text("main"))
+    open_job(po, job_id)
+    check("after withdrawal the poster no longer sees an Open CV link", "Open CV (PDF" not in po.inner_text("main"))
+    r = cv_route(po, job_id, app1)
+    check("after withdrawal the poster's CV link gives 404", r.status == 404, str(r.status))
+    st, _ = storage_status(token_for(POSTER), cv1)
+    check("API: after withdrawal the poster cannot read the file", st != 200, str(st))
+    st, head = storage_status(s1token, cv1)
+    check("API: after withdrawal the applicant can still read their file", st == 200 and head == b"%PDF-", str(st))
 
     # 7. Close hides the job from others; reopen shows it again
     open_job(po, job_id)

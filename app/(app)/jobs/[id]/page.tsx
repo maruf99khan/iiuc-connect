@@ -55,12 +55,16 @@ async function Job({
       )
       .eq("id", id)
       .maybeSingle(),
-    supabase.from("profiles").select("verification_status").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("verification_status, visibility")
+      .eq("id", user.id)
+      .maybeSingle(),
     // Row Level Security: the poster sees every application, anyone else only their own.
     supabase
       .from("job_applications")
       .select(
-        "id, status, message, applicant_id, applicant:profiles!job_applications_applicant_id_fkey(full_name)",
+        "id, status, message, cv_path, applicant_id, applicant:profiles!job_applications_applicant_id_fkey(full_name, visibility)",
       )
       .eq("job_id", id)
       .order("created_at"),
@@ -171,12 +175,33 @@ async function Job({
                 {list.map((a) => (
                   <li key={a.id} className="flex flex-col gap-2 py-4">
                     <p className="font-semibold break-words">
-                      {a.applicant?.full_name || "A verified member"}
+                      {a.applicant && a.applicant.visibility !== "private" ? (
+                        <Link href={`/members/${a.applicant_id}`}>
+                          {a.applicant.full_name || "A verified member"}
+                        </Link>
+                      ) : (
+                        a.applicant?.full_name || "A verified member"
+                      )}
                     </p>
+                    {!a.applicant || a.applicant.visibility === "private" ? (
+                      <p className="text-xs text-muted">This member keeps their profile private.</p>
+                    ) : null}
                     {a.message ? (
                       <p className="text-sm break-words whitespace-pre-line">{a.message}</p>
                     ) : (
                       <p className="text-sm text-muted">No message.</p>
+                    )}
+                    {a.status === "withdrawn" ? null : a.cv_path ? (
+                      <a
+                        href={`/jobs/${job.id}/cv/${a.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="self-start text-sm"
+                      >
+                        Open CV (PDF, opens in a new tab)
+                      </a>
+                    ) : (
+                      <p className="text-sm text-muted">No CV attached.</p>
                     )}
                     <span className="self-start rounded-full border border-border px-2 py-0.5 text-xs">
                       {APPLICATION_TEXT[a.status] ?? a.status}
@@ -217,6 +242,18 @@ async function Job({
                   {APPLICATION_TEXT[mine.status] ?? mine.status}
                 </span>
               </p>
+              {mine.cv_path ? (
+                <p className="text-sm">
+                  CV attached.{" "}
+                  <a
+                    href={`/jobs/${job.id}/cv/${mine.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open it (PDF, opens in a new tab)
+                  </a>
+                </p>
+              ) : null}
               {mine.status === "submitted" || mine.status === "shortlisted" ? (
                 <form action={withdrawApplication}>
                   <input type="hidden" name="applicationId" value={mine.id} />
@@ -233,7 +270,7 @@ async function Job({
           ) : job.status === "closed" ? (
             <p className="text-muted">This job is closed.</p>
           ) : (
-            <ApplyForm jobId={job.id} />
+            <ApplyForm jobId={job.id} profilePrivate={me.data?.visibility === "private"} />
           )}
         </section>
       )}
