@@ -1,0 +1,54 @@
+IIUC Connect — Sprint 5 verification record (mentorship sessions)
+Date: 2026-11-22
+Branch: sprint-5-sessions (cut from launch-blockers; Sprints 2 to 5 and
+launch-blockers are all unmerged)
+
+Database (migration 20261122102237 mentor_sessions; applied to the hosted project)
+  pgTAP supabase/tests/004_mentor_sessions.test.sql: 34/34 passed against the
+  hosted schema (run as one file, failures-only output).
+  Covers: only a verified graduate can offer slots; past, too-soon, too-far and
+  odd-length slots refused; https-only meeting link; 10 open slots; verified
+  members see open slots, a member who is not verified and a private mentor's
+  slots do not; the link is hidden until booking and then visible to the booker
+  only; booking in someone else's name, booking one's own slot, cancelling a
+  mentor's open slot and moving a slot are refused; release clears the booking
+  and hides the link; 3 active bookings; a mentor cannot attach a booker while
+  cancelling; a cancelled slot is hidden and cannot be rebooked; no deletes;
+  signed-out visitors refused; one request cannot add or book past the limits.
+  Design bug caught before applying: counting limits in BEFORE row triggers
+  cannot see the other rows of the same statement, so a single request could
+  insert or book many rows past the limits. Counts moved to AFTER triggers and
+  two tests added that try exactly that.
+  Security advisors: 0 findings. Performance: only the unused-index INFO.
+
+Application (Windows 11, Node 26.13.1)
+  npm run lint       pass
+  npm run typecheck  pass
+  npm test           pass, 202 of 202 (38 new for time and slot rules, run red first)
+  Design detector    0 findings on the new files (hook scans)
+
+Browser and API (Playwright, Chromium, next dev, hosted database; 20/20)
+  Four synthetic accounts (graduate mentor, two students, a private mentor with
+  a slot) were seeded and deleted afterwards.
+  Mentor: past time and non-https link refused; slot added and shown as 3:00 pm;
+  15:00 Bangladesh time stored as 09:00 UTC; sees who booked and their message;
+  can remove a slot. Student: a graduate's page lists open slots; booking shows
+  the session and a meeting link that opens safely; can cancel and the slot opens
+  again. Second student: sees only slots still open, can read no meeting link,
+  cannot see the private mentor's slot, cannot move a slot (API). A student is
+  told graduates offer sessions. Screenshots reviewed: booking list, booked
+  session (phone, light).
+
+Not verified / known gaps
+  - Not exercised in the browser: the 10-slot and 3-booking limits (database
+    tests only), two members racing for one slot (the update only matches an open
+    slot, so one wins), a dark-mode review of every new screen.
+  - No emails or reminders; no time-zone choice (everything is Bangladesh time);
+    no rescheduling (cancel and re-offer); no review or rating after a session.
+  - Meeting links are shown as given (https only); they are not checked against a
+    list of video services.
+  - CI: the 'database' job now also runs 004; its result cannot be read from here
+    and it could not be rehearsed locally (Docker Desktop fails to start here).
+  - Unchanged from earlier records: 'Confirm email' is off, no email provider,
+    evidence purge unrun with a real key, Safari / iOS and a real phone untested,
+    DESIGN.md not written.

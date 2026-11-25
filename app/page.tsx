@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const pillars = [
   {
     title: "Verified members",
@@ -16,17 +18,22 @@ const pillars = [
 export default function HomePage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-5 py-12 sm:py-20">
-      <header className="flex flex-col gap-4">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand">
-          International Islamic University Chittagong
-        </p>
+      <header className="flex flex-col gap-5">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
           IIUC Connect
         </h1>
         <p className="max-w-xl text-lg leading-8 text-muted">
-          A verified alumni and professional network for IIUC students and
-          graduates.
+          A verified alumni and professional network for students and
+          graduates of International Islamic University Chittagong.
         </p>
+        <div className="mt-1 flex flex-col gap-3 sm:flex-row">
+          <Link href="/sign-up" className="button button-primary">
+            Create an account
+          </Link>
+          <Link href="/sign-in" className="button button-quiet">
+            Sign in
+          </Link>
+        </div>
       </header>
 
       <section aria-labelledby="pillars-heading" className="flex flex-col gap-4">
@@ -51,7 +58,8 @@ export default function HomePage() {
         className="rounded-xl border border-border bg-surface px-5 py-4 text-sm text-muted"
       >
         This platform is under development as a CSE undergraduate thesis
-        project. Sign-in is not open yet.
+        project. You can create an account now. Search and mentorship are not
+        open yet.
       </p>
     </main>
   );

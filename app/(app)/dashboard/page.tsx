@@ -1,0 +1,175 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
+
+import { getCurrentUser } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
+import {
+  VERIFICATION_COPY,
+  VERIFICATION_STEPS,
+  isVerified,
+} from "@/lib/verification/status";
+
+export const metadata: Metadata = { title: "Dashboard" };
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<p className="text-muted">Loading your account…</p>}>
+      <AccountStatus />
+    </Suspense>
+  );
+}
+
+async function AccountStatus() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/sign-in?next=/dashboard");
+  }
+
+  // Row Level Security lets a member read their own row, so this needs no
+  // privileged key.
+  const supabase = await createClient();
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("verification_status, role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error || !profile) {
+    return (
+      <p role="alert" className="leading-7 text-danger">
+        We could not load your account. Refresh the page to try again.
+      </p>
+    );
+  }
+
+  const copy = VERIFICATION_COPY[profile.verification_status];
+
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight text-balance">
+          {copy.headline}
+        </h1>
+        {user.email ? (
+          <p className="text-muted">
+            Signed in as <span className="break-all">{user.email}</span>
+          </p>
+        ) : null}
+      </div>
+
+      <section aria-labelledby="steps-heading" className="flex flex-col gap-5">
+        <h2 id="steps-heading" className="text-lg font-semibold">
+          Your verification
+        </h2>
+        <ol className="flex flex-col">
+          {VERIFICATION_STEPS.map((title, index) => {
+            const done = index < copy.stepsDone;
+            const current = index === copy.stepsDone;
+            const last = index === VERIFICATION_STEPS.length - 1;
+
+            return (
+              <li
+                key={title}
+                aria-current={current ? "step" : undefined}
+                className="flex gap-4"
+              >
+                <div className="flex flex-col items-center">
+                  <StepMarker done={done} current={current} />
+                  {last ? null : (
+                    <span
+                      aria-hidden="true"
+                      className={`w-px flex-1 ${done ? "bg-brand" : "bg-border"}`}
+                    />
+                  )}
+                </div>
+                <div className={`flex flex-col gap-1 ${last ? "" : "pb-7"}`}>
+                  <p
+                    className={`leading-7 font-medium ${done || current ? "" : "text-muted"}`}
+                  >
+                    <span className="sr-only">
+                      {done ? "Done: " : current ? "Current step: " : "Later: "}
+                    </span>
+                    {title}
+                  </p>
+                  {current && copy.detail ? (
+                    <p className="max-w-prose leading-7 text-muted">
+                      {copy.detail}
+                    </p>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+        {copy.action ? (
+          <Link href={copy.action.href} className="button button-primary self-start">
+            {copy.action.label}
+          </Link>
+        ) : null}
+      </section>
+
+      <section aria-labelledby="community-heading" className="flex flex-col gap-3">
+        <h2 id="community-heading" className="text-lg font-semibold">
+          Community
+        </h2>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Link href="/profile" className="button button-quiet">
+            Edit your profile
+          </Link>
+          {isVerified(profile.verification_status) ? (
+            <Link href="/directory" className="button button-quiet">
+              Browse the member directory
+            </Link>
+          ) : null}
+        </div>
+      </section>
+
+      {profile.role === "admin" ? (
+        <section aria-labelledby="admin-heading" className="flex flex-col gap-3">
+          <h2 id="admin-heading" className="text-lg font-semibold">
+            Admin
+          </h2>
+          <Link
+            href="/admin/verifications"
+            className="button button-quiet self-start"
+          >
+            Review verification requests
+          </Link>
+        </section>
+      ) : null}
+    </>
+  );
+}
+
+function StepMarker({ done, current }: { done: boolean; current: boolean }) {
+  if (done) {
+    return (
+      <span
+        aria-hidden="true"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand text-on-brand"
+      >
+        <svg viewBox="0 0 16 16" className="size-4" fill="none">
+          <path
+            d="M3.5 8.5l3 3 6-7"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex size-7 shrink-0 items-center justify-center rounded-full border-2 ${current ? "border-brand" : "border-border"}`}
+    >
+      {current ? <span className="size-2.5 rounded-full bg-brand" /> : null}
+    </span>
+  );
+}

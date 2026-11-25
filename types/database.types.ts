@@ -14,6 +14,424 @@ export type Database = {
   }
   public: {
     Tables: {
+      job_applications: {
+        Row: {
+          applicant_id: string
+          created_at: string
+          cv_path: string | null
+          id: string
+          job_id: string
+          message: string | null
+          status: Database["public"]["Enums"]["application_status"]
+          updated_at: string
+        }
+        Insert: {
+          applicant_id?: string
+          created_at?: string
+          cv_path?: string | null
+          id?: string
+          job_id: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+        }
+        Update: {
+          applicant_id?: string
+          created_at?: string
+          cv_path?: string | null
+          id?: string
+          job_id?: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          company: string
+          created_at: string
+          description: string
+          id: string
+          job_type: Database["public"]["Enums"]["job_type"]
+          location: string | null
+          poster_id: string
+          status: Database["public"]["Enums"]["job_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          description: string
+          id?: string
+          job_type: Database["public"]["Enums"]["job_type"]
+          location?: string | null
+          poster_id?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          description?: string
+          id?: string
+          job_type?: Database["public"]["Enums"]["job_type"]
+          location?: string | null
+          poster_id?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_poster_id_fkey"
+            columns: ["poster_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          link: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          link: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["notification_kind"]
+          link?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentor_availability_rules: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          mentor_id: string
+          start_time: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          mentor_id?: string
+          start_time: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          mentor_id?: string
+          start_time?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_availability_rules_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentor_profiles: {
+        Row: {
+          accepting_requests: boolean
+          bio: string | null
+          created_at: string
+          expertise_areas: string[]
+          id: string
+          max_sessions_per_week: number
+          updated_at: string
+        }
+        Insert: {
+          accepting_requests?: boolean
+          bio?: string | null
+          created_at?: string
+          expertise_areas?: string[]
+          id?: string
+          max_sessions_per_week?: number
+          updated_at?: string
+        }
+        Update: {
+          accepting_requests?: boolean
+          bio?: string | null
+          created_at?: string
+          expertise_areas?: string[]
+          id?: string
+          max_sessions_per_week?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentor_slots: {
+        Row: {
+          created_at: string
+          id: string
+          mentor_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["slot_status"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mentor_id: string
+          starts_at: string
+          status?: Database["public"]["Enums"]["slot_status"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mentor_id?: string
+          starts_at?: string
+          status?: Database["public"]["Enums"]["slot_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_slots_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentorship_requests: {
+        Row: {
+          created_at: string
+          duration_minutes: number
+          expires_at: string
+          goal: string
+          id: string
+          meeting_url: string | null
+          mentee_id: string
+          mentor_id: string
+          question_1: string
+          question_2: string | null
+          responded_at: string | null
+          slot_id: string
+          status: Database["public"]["Enums"]["request_status"]
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes: number
+          expires_at?: string
+          goal: string
+          id?: string
+          meeting_url?: string | null
+          mentee_id?: string
+          mentor_id?: string
+          question_1: string
+          question_2?: string | null
+          responded_at?: string | null
+          slot_id: string
+          status?: Database["public"]["Enums"]["request_status"]
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number
+          expires_at?: string
+          goal?: string
+          id?: string
+          meeting_url?: string | null
+          mentee_id?: string
+          mentor_id?: string
+          question_1?: string
+          question_2?: string | null
+          responded_at?: string | null
+          slot_id?: string
+          status?: Database["public"]["Enums"]["request_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentorship_requests_mentee_id_fkey"
+            columns: ["mentee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentorship_requests_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentorship_requests_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "mentor_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          reviewee_id: string
+          reviewer_id: string
+          session_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          reviewee_id?: string
+          reviewer_id?: string
+          session_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          reviewee_id?: string
+          reviewer_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_feedback_reviewee_id_fkey"
+            columns: ["reviewee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_feedback_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_feedback_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          created_at: string
+          duration_minutes: number
+          id: string
+          meeting_url: string
+          mentee_id: string
+          mentor_id: string
+          outcome_at: string | null
+          request_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["session_status"]
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes: number
+          id?: string
+          meeting_url: string
+          mentee_id: string
+          mentor_id: string
+          outcome_at?: string | null
+          request_id: string
+          starts_at: string
+          status?: Database["public"]["Enums"]["session_status"]
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          meeting_url?: string
+          mentee_id?: string
+          mentor_id?: string
+          outcome_at?: string | null
+          request_id?: string
+          starts_at?: string
+          status?: Database["public"]["Enums"]["session_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_mentee_id_fkey"
+            columns: ["mentee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: true
+            referencedRelation: "mentorship_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_private: {
         Row: {
           created_at: string
@@ -62,6 +480,7 @@ export type Database = {
           created_at: string
           department: string | null
           full_name: string
+          github_url: string | null
           graduation_year: number | null
           headline: string | null
           id: string
@@ -70,8 +489,10 @@ export type Database = {
           linkedin_url: string | null
           location: string | null
           onboarded_at: string | null
+          portfolio_url: string | null
           reputation_score: number
           role: Database["public"]["Enums"]["user_role"]
+          search_text: string
           skills: string[]
           updated_at: string
           verification_status: Database["public"]["Enums"]["verification_status"]
@@ -86,6 +507,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           full_name?: string
+          github_url?: string | null
           graduation_year?: number | null
           headline?: string | null
           id: string
@@ -94,8 +516,10 @@ export type Database = {
           linkedin_url?: string | null
           location?: string | null
           onboarded_at?: string | null
+          portfolio_url?: string | null
           reputation_score?: number
           role?: Database["public"]["Enums"]["user_role"]
+          search_text?: string
           skills?: string[]
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -110,6 +534,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           full_name?: string
+          github_url?: string | null
           graduation_year?: number | null
           headline?: string | null
           id?: string
@@ -118,8 +543,10 @@ export type Database = {
           linkedin_url?: string | null
           location?: string | null
           onboarded_at?: string | null
+          portfolio_url?: string | null
           reputation_score?: number
           role?: Database["public"]["Enums"]["user_role"]
+          search_text?: string
           skills?: string[]
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -144,7 +571,7 @@ export type Database = {
           purged_at?: string | null
           request_id: string
           storage_path: string
-          user_id: string
+          user_id?: string
         }
         Update: {
           created_at?: string
@@ -251,7 +678,7 @@ export type Database = {
           reviewer_id?: string | null
           status?: Database["public"]["Enums"]["verification_request_status"]
           updated_at?: string
-          user_id: string
+          user_id?: string
         }
         Update: {
           claimed_affiliation?: Database["public"]["Enums"]["affiliation"]
@@ -291,12 +718,51 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cv_purge_candidates: {
+        Args: { p_limit?: number }
+        Returns: {
+          path: string
+          reason: string
+        }[]
+      }
+      evidence_purge_candidates: {
+        Args: { p_limit?: number; p_retention_days?: number }
+        Returns: {
+          document_id: string
+          path: string
+          reason: string
+        }[]
+      }
+      mark_evidence_purged: {
+        Args: { p_document_ids: string[] }
+        Returns: number
+      }
     }
     Enums: {
       affiliation: "student" | "alumni"
+      application_status: "submitted" | "shortlisted" | "rejected" | "withdrawn"
       document_kind: "student_id_card" | "certificate" | "transcript" | "other"
+      job_status: "active" | "closed"
+      job_type: "full_time" | "part_time" | "internship" | "contract"
+      notification_kind:
+        | "request_received"
+        | "request_accepted"
+        | "request_declined"
+        | "request_cancelled"
+        | "request_expired"
+        | "application_received"
+        | "application_shortlisted"
+        | "application_rejected"
+        | "application_withdrawn"
       profile_visibility: "public" | "iiuc_community" | "private"
+      request_status:
+        | "pending"
+        | "accepted"
+        | "declined"
+        | "expired"
+        | "cancelled"
+      session_status: "scheduled" | "completed" | "cancelled" | "no_show"
+      slot_status: "open" | "held" | "booked" | "cancelled"
       user_role: "member" | "admin"
       verification_method: "institutional_email" | "document"
       verification_request_status:
@@ -439,8 +905,31 @@ export const Constants = {
   public: {
     Enums: {
       affiliation: ["student", "alumni"],
+      application_status: ["submitted", "shortlisted", "rejected", "withdrawn"],
       document_kind: ["student_id_card", "certificate", "transcript", "other"],
+      job_status: ["active", "closed"],
+      job_type: ["full_time", "part_time", "internship", "contract"],
+      notification_kind: [
+        "request_received",
+        "request_accepted",
+        "request_declined",
+        "request_cancelled",
+        "request_expired",
+        "application_received",
+        "application_shortlisted",
+        "application_rejected",
+        "application_withdrawn",
+      ],
       profile_visibility: ["public", "iiuc_community", "private"],
+      request_status: [
+        "pending",
+        "accepted",
+        "declined",
+        "expired",
+        "cancelled",
+      ],
+      session_status: ["scheduled", "completed", "cancelled", "no_show"],
+      slot_status: ["open", "held", "booked", "cancelled"],
       user_role: ["member", "admin"],
       verification_method: ["institutional_email", "document"],
       verification_request_status: [

@@ -7,6 +7,11 @@
   --border: #d5e0d9;
   --muted: #4a5a51;
   --brand: #0f5132;
+  /* Field outlines need 3:1 against the page (WCAG 1.4.11); hairlines do not. */
+  --field-border: #76887e;
+  --brand-strong: #0b3d26;
+  --on-brand: #ffffff;
+  --danger: #b42318;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -17,6 +22,10 @@
     --border: #25352c;
     --muted: #a9b9b0;
     --brand: #6fcf97;
+    --field-border: #5f7669;
+    --brand-strong: #8fdcae;
+    --on-brand: #0b120e;
+    --danger: #ffa198;
   }
 }
 
@@ -27,6 +36,9 @@
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-on-brand: var(--on-brand);
+  --color-danger: var(--danger);
   /* System fonts: no font download, which matters on slow mobile data. */
   --font-sans:
     system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue",
@@ -35,4 +47,72 @@
 
 body {
   font-family: var(--font-sans);
+}
+
+/* The parts of the page the browser draws, themed from the palette. */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+input,
+textarea {
+  caret-color: var(--brand);
+}
+
+@layer base {
+  /* Links inside running text. Buttons and the wordmark opt out below. */
+  a {
+    color: var(--brand);
+    font-weight: 500;
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
+}
+
+@layer components {
+  .wordmark {
+    color: var(--foreground);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-decoration-line: none;
+  }
+
+  /* 3rem tall: comfortably above the 44px minimum touch target. */
+  .button {
+    @apply inline-flex min-h-12 items-center justify-center rounded-xl px-5 text-base font-semibold no-underline transition-colors;
+  }
+
+  .button:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+
+  .button-primary {
+    @apply bg-brand text-on-brand hover:bg-brand-strong;
+  }
+
+  .button-quiet {
+    @apply border border-border bg-background text-foreground hover:bg-surface;
+  }
+
+  /* 16px text stops iOS Safari zooming the page when a field is focused. */
+  .field {
+    @apply block min-h-12 w-full rounded-xl bg-background px-4 text-base text-foreground;
+    border: 1px solid var(--field-border);
+  }
+
+  .field[aria-invalid="true"] {
+    @apply border-danger;
+  }
 }

@@ -1,0 +1,63 @@
+IIUC Connect — In-app notifications verification record (plan day 27 Nov, built 24 Nov)
+Date: 2026-11-24
+Branch: sprint-6-mentorship (on top of mentorship and jobs; PR 1 is open and not merged)
+Built while the owner was away; nothing here needed their accounts or secrets.
+
+Database (migration 20261124150000_notifications, applied to the hosted project)
+  Table notifications (user_id, kind, link, read_at, created_at). A row holds a kind
+  and an in-app path only: no names and no free text, so it cannot leak what a member
+  typed. The app turns the kind into one sentence.
+  Rows are made only by triggers (members have no insert privilege and cannot call
+  private.notify):
+    mentorship: new request -> mentor; accepted, declined, expired -> mentee;
+                cancelled -> the other side (a call with no signed-in user -> mentee)
+    jobs:       new application -> poster; shortlisted, rejected -> applicant;
+                withdrawn -> poster
+  Members can read, mark read (only read_at is writable), and delete their own rows.
+  The link must start with / and not with // and is at most 200 characters (CHECK).
+  pgTAP supabase/tests/007_notifications.test.sql: 27/27 passed against the hosted
+  schema (one run, every TAP line printed).
+  Negative control: with the select policy weakened to allow everyone, the "a bystander
+  sees no notifications" assertion failed ("1 test failed of 1"), in a rolled-back
+  transaction.
+  Security advisors: 0 findings. Performance advisors: unchanged (the two INFO notes
+  already recorded).
+  NOT yet run in CI (pushed after this record was written). Files 005 and 006 were not
+  re-run on the hosted database after the new triggers were added to the tables they
+  test; CI runs all of them together.
+
+Application (Windows 11)
+  npm run lint        pass
+  npm run typecheck   pass
+  npm test            244/244 (3 new: every notification kind has its own sentence,
+                      written before the code)
+  python e2e/security_anon.py   all headers present; notifications refused (401) for
+                      signed-out visitors
+  python e2e/notifications.py   17/17 checks passed against npm run dev and the hosted
+        database (a graduate and two students), 375 px: a member with no events sees the
+        empty state and no badge; an application makes the poster's nav show 1 unread;
+        the notification names no one and quotes no message; Open marks it read and goes
+        to the job; shortlisting notifies the applicant; a bystander sees none (UI and
+        API); API: a member cannot create a notification (403); Mark all as read clears
+        the badge; Delete removes a notification; no horizontal overflow at 320 or 375
+        px; no uncaught page errors.
+  python e2e/jobs.py            22/22 again after the layout change (regression check).
+  Screenshots (light and dark, 375 px) in e2e/shots/ (ignored by git).
+  Cleanup: the three accounts were deleted; users, profiles, jobs and notifications all
+  count 0.
+
+Problems found while building
+  1. The first browser run failed one check: the nav badge component read the database
+     before anything marked it as request-time, so Next.js (Cache Components) reported
+     "unstable value Date.now() while prerendering" on every signed-in page. Fixed with
+     await connection() at the top of the component. 17/17 after the fix.
+  2. A regression run of jobs.py failed once only because the notifications run had left
+     its own job and applications behind; after clearing the data it passed 22/22.
+
+Not built or not verified
+  - Email for notifications (needs the project sender in the app's server environment;
+    the Supabase SMTP now configured only sends auth emails).
+  - Notification preferences (decision D-023).
+  - Mentorship reminders before a session, and the .ics calendar file.
+  - A session-closed or feedback-revealed notification.
+  - CI, a real phone, Safari on iOS, a screen reader.

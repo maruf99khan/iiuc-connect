@@ -1,0 +1,71 @@
+IIUC Connect — launch-blockers record
+Date: 2026-11-22
+Branch: launch-blockers (cut from sprint-4-directory)
+
+What was blocking real members, and what was done
+
+1. Password reset and resend-confirmation email: BUILT.
+   /forgot-password, /auth/reset, /reset-password; "Send the confirmation email
+   again" on the check-your-email screen and on the sign-in "not confirmed"
+   message; shared link handler for /auth/confirm and /auth/reset.
+   Tests: 10 new schema tests, written first and run red; Playwright 19/19
+   (hosted project, dev server, two throwaway accounts deleted afterwards).
+   Covered: reset answer identical for an address with no account; invalid
+   address refused; /reset-password signed out and /auth/reset with a made-up
+   code, token, hostile ?next=//evil.example, bad type or nothing all land on the
+   "expired" notice with no open redirect; unknown notice codes show nothing;
+   mismatched passwords refused; reusing the current password refused; a new
+   password signs in and the old one is refused; an unconfirmed account sees the
+   resend button, outside the sign-in form (no nested forms).
+   NOT verified: any real email. The built-in mailer cannot be used for a test
+   (about 2 per hour, organization members only), so the emailed link, the
+   ?code= / ?token_hash= success paths of /auth/reset, the resend email itself,
+   and the "sign out all other sessions" effect on an already-issued access token
+   (a revoked session's access token stays valid until it expires, up to an hour
+   by default) were not exercised.
+
+2. Evidence files outliving their purpose: BUILT, live deletion NOT verified.
+   Migration 20261122094940 evidence_purge: public.evidence_purge_candidates and
+   public.mark_evidence_purged, executable by the service role only.
+   Rolled-back SQL test against the hosted project: a 40-day-old decided document
+   and a 3-day-old orphan are candidates; a 5-day-old withdrawn claim, an open
+   claim, a file with a record and a fresh orphan are not; marking is idempotent
+   (1 then 0) and removes the candidate; anon and authenticated are refused,
+   service_role can list.
+   lib/evidence/purge.ts (15 tests, run red first) removes files, then marks only
+   documents whose file the Storage API confirmed gone; lib/evidence/cron.ts (19
+   tests, run red first) parses configuration and checks the bearer token in
+   constant time. app/api/cron/purge-evidence/route.ts ties them together.
+   Route checked on a production build with test-only settings: no header, empty
+   bearer, wrong secret and secret-without-Bearer all 401; POST 405; unconfigured
+   server 503; right secret reaches Supabase and is rejected for the fake key (500,
+   log line names no secret).
+   NOT verified: a real purge. It needs the project's secret key and CRON_SECRET
+   on the host, which were not available. Also unverified: that Storage's remove()
+   returns each deleted file's full path in `name` (the code treats any file not
+   reported as still present, which is the safe direction; it would retry daily).
+   types/database.types.ts: Functions hand-patched, then compared with the
+   generator's output (identical); the missing search_text field from Sprint 4
+   was added at the same time.
+
+3. Email provider: NOT DONE. Needs the project owner (dashboard). Checklist and
+   reasons are in README "Before real members sign up".
+
+4. "Confirm email" back on: NOT DONE. Needs the project owner (dashboard).
+
+5. CI and merging: NOT DONE. The 'database' job (supabase db start + supabase
+   test db) cannot be read from here (private repository, GitHub CLI not signed
+   in), and Docker's engine is not running, so it was not rehearsed locally.
+   Starting it would download several gigabytes; not done without asking. The
+   migrations and test files were each applied and run against the hosted
+   project's Postgres instead.
+
+Application checks (Windows 11, Node 26.13.1)
+  npm run lint       pass
+  npm run typecheck  pass
+  npm test           pass, 164 of 164
+  npm run build      pass; adds /forgot-password, /reset-password, /auth/reset,
+                     /api/cron/purge-evidence
+  Security advisors  0 findings after the migration
+  Hosted database    left empty: 0 users, profiles, requests; 3 test images from
+                     Sprint 3 may remain in the storage bucket (delete in dashboard)

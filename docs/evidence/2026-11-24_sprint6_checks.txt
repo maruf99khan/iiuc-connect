@@ -1,0 +1,79 @@
+IIUC Connect — Sprint 6 verification record (mentorship request flow)
+Date: 2026-11-24
+Branch: sprint-6-mentorship (stacked on sprints 2 to 5; PR 1 into main is open and
+not merged)
+
+Database (migrations 008 to 010 on the hosted project, plus 009b)
+  20261123174737 mentor_availability     profiles, weekly rules, generated 30-minute slots
+  20261123175114 mentorship_requests     requests, sessions, blind feedback, triggers, RLS
+  20261123175257 mentorship_slot_policy_fix   (009b) see "Problems found" below
+  20261123200000 mentorship_jobs         pg_cron: expire requests every 15 min,
+                                         generate slots nightly at 20:00 UTC
+  pgTAP supabase/tests/005_mentorship.test.sql: 97 assertions, plan fixed at 97.
+  Run in CI (GitHub Actions run 45350317493, supabase CLI latest at the time,
+  every repo migration applied to a throwaway Postgres): all four files pass,
+  "Files=4, Tests=217, Result: PASS".
+  Not re-run against the hosted database after the last three test fixes and the
+  plan lock; CI is the only run of the final file.
+  Negative control (a deliberately broken policy must fail the suite): NOT done
+  for this file.
+  Security advisors after the last migration: 0 findings.
+  Performance advisors: INFO only. session_feedback_reviewer_id_fkey has no
+  covering index; profiles_dept_batch_year_idx is unused. Not fixed (tables are
+  tiny); noted for the load-measurement sprint.
+  Jobs: cron.schedule ran without error on the hosted database. The jobs have
+  not been left to fire on their own; expiry was exercised by calling
+  private.expire_requests() by hand (below).
+
+Application (Windows 11)
+  npm run lint        pass
+  npm run typecheck   pass (types regenerated from the hosted schema)
+  npm test            226/226 (57 new: lib/mentorship time and schemas)
+  python e2e/security_anon.py   all required headers present; every mentorship
+        table refused for signed-out visitors (401 or empty); no overflow at 320 px
+  python e2e/mentorship.py      25/25 checks passed against npm run dev and the
+        hosted database, four throwaway accounts (mentor, two students, a
+        private graduate), phone width 375 px:
+        windows add and generate slots; end-before-start refused; cap of 0
+        refused; a short goal refused; request redirects and confirms; second
+        pending request to the same mentor refused; other member sees one fewer
+        slot and cannot read requests (API) or request a private graduate's slot
+        (403); http link refused and https accepted; the mentee link opens with
+        noopener; other member reads no sessions (API); cancel reopens the slot;
+        decline shows; expiry (SQL step) shows Expired and reopens the slot;
+        session moved into the past (SQL step): mentor sees both outcome
+        buttons; blind rating (mentor cannot see the student's rating until
+        both have rated); no uncaught page errors.
+  Screenshots (light and dark, 375 px) in e2e/shots/ (ignored by git).
+  Cleanup: the four accounts were deleted afterwards; auth.users, profiles,
+  mentor_slots, requests, sessions, rules and mentor_profiles all count 0.
+
+Problems found while building, and how they were handled
+  1. A request could target a private graduate's slot (found while writing the
+     plan). The insert policy now requires the slot to be visible to the caller.
+  2. That policy and the slot policy referenced each other; Postgres reports any
+     cycle between two tables' policies as "infinite recursion", even for
+     different commands. Migration 009b moves the check into a SECURITY DEFINER
+     function (private.is_slot_requester), which is not expanded into the outer
+     query.
+  3. Three of 88 early test assertions failed (46, 49, 70) because a BEFORE row
+     trigger refuses before row-level security checks the row; the expected
+     error codes were corrected, not the code under test.
+  4. CI failed twice for reasons unrelated to the schema: the test tail printed
+     only failures so pg_prove saw "planned 97 tests but ran 0"; and the
+     supabase/setup-cli step hit the GitHub API rate limit resolving "latest"
+     (CLI now pinned to 3.3.0).
+  5. After the browser run: an accepted request whose session had already
+     closed still offered "Cancel session". The page now offers it only while
+     a scheduled session exists.
+
+Not verified
+  - (Resolved after this record was first written.) CI on commit 2266d2d, with the
+    CLI pinned and the plan locked at 97: the push run and the pull_request run both
+    completed with success (jobs verify and database).
+  - pg_cron actually firing on schedule (only the functions were called by hand).
+  - .ics calendar file and email or in-app reminders: not built (need the project
+    sender, D-010).
+  - A real phone, Safari on iOS, and a screen reader.
+  - Password sign-in instead of email OTP (D-021, Proposed).
+  - Load and search-precision measurements (after the freeze).

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "sprint-*"]
   pull_request:
 
 permissions:
@@ -26,3 +26,16 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # Applies every migration to a throwaway Postgres and runs the pgTAP tests,
+  # so a change that weakens Row Level Security fails the build.
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          # Pinned: "latest" asks the GitHub API for the newest release and fails when rate-limited.
+          version: 3.3.0
+      - run: supabase db start
+      - run: supabase test db

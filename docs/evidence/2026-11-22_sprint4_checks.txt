@@ -1,0 +1,88 @@
+IIUC Connect — Sprint 4 verification record (profiles and member directory)
+Date: 2026-11-22
+Branch: sprint-4-directory (cut from sprint-3-verification; neither Sprint 2, 3 nor 4
+is merged to main)
+
+Database (migrations 20261122092227 profiles_directory, 20261122092528
+linkedin_host_check; applied to the hosted project)
+  pgTAP supabase/tests/003_profiles_directory.test.sql
+    17/17 passed against the hosted schema; the two LinkedIn assertions added
+    afterwards (19 in the file) were run separately, 2/2. Not re-run as one file.
+    Covers: trigram index present; search_text collects and follows edits; a
+    verified member finds community profiles; every search word must match;
+    private profiles are unfindable; an unverified member finds none; members
+    edit their own text and visibility; department, batch, graduation year and
+    (once verified) name cannot be changed; https and host-only LinkedIn
+    addresses; at most 30 skills.
+  Sprint 3 approval flow re-checked after the grant change (compact rolled-back
+  run): claim -> approve still sets status, department, batch, student ID and
+  search text. The full 55-test file 002 was not re-run.
+  LinkedIn constraint: 12 sample addresses, 5 accepted, 7 refused (http,
+  linkedin.com.evil.example, notlinkedin.com, linkedin.com@evil.example, port,
+  other host with linkedin.com in the path or query).
+  Scale check (rolled back): with 20,000 profiles Postgres plans a Bitmap Index
+  Scan on profiles_search_text_idx for a two-word search, 1.2 ms. The advisor's
+  "unused index" note is expected on a 27-row table.
+  Security advisors: 0 findings after every migration and after the browser run.
+
+Application (Windows 11, Node 26.13.1)
+  npm run lint       pass, 0 problems
+  npm run typecheck  pass
+  npm test           pass, 120 of 120 (env 5, auth 23, claim 39, profile 30,
+                     directory query 23). The profile and directory tests were
+                     run red before the code existed.
+  npm run build      pass; routes add /profile, /directory, /members/[id]
+  Design detector    0 findings
+
+Browser and API (Playwright, Chromium, `next dev`, hosted database; 62/62)
+  27 synthetic accounts were seeded (viewer, admin, unverified member who can
+  sign in; a full graduate profile, a private member, a public member, an
+  unverified public member, 20 fillers) and deleted afterwards.
+  Directory: 23 listed over two pages in name order; private, unverified and
+  self never listed; every search word must match; case-insensitive; by skill,
+  city, department, batch; students/graduates filter; seven hostile inputs
+  (%, _, comma and bracket, SQL-looking, backslash, script tag, 300 characters)
+  return nothing and no error; typed markup is shown as text; a page past the
+  end is handled.
+  Member page: name, status line, work line, bio line breaks, skills, LinkedIn
+  link opens safely (noopener, new tab); private, unverified and malformed ids
+  show the not-found screen with no member data; own page says so.
+  Profile: verified members have no name field; a LinkedIn address on another
+  site and more than 30 skills are refused with typed values kept; a valid save
+  confirms and shows saved values (duplicate skill removed); choosing 'Only me'
+  removes the member from search and choosing verified members restores it; an
+  admin's directory still never lists a private profile (the app filters it,
+  because admin row access would otherwise show it).
+  Unverified member: sees the gate, is sent to /verify from a profile, can still
+  edit their name.
+  API with a member's token: cannot change department, batch, graduation year,
+  name, role (403) or store a LinkedIn address on another host (400); can edit
+  the headline; cannot find a private profile by search. A visitor who is not
+  signed in reads exactly the one 'public' verified profile.
+  Screenshots reviewed: directory (phone light and dark, desktop), member page,
+  profile form (phone).
+
+Found and fixed during the sprint
+  1. Members could edit the department, batch and graduation year an admin had
+     approved (a Sprint 1 grant). Revoked; the verified name is locked by trigger.
+  2. The database accepted any https LinkedIn address, so a member calling the
+     API directly could show an arbitrary link on their profile. Tightened.
+  3. The 'public' visibility was labelled 'Anyone signed in' while the database
+     lets visitors who are not signed in read it. The label now says so.
+  4. A page past the end of the results said 'No members match'. Now it says
+     there is no such page.
+  5. Test-only: label selectors matched more than one element.
+
+Not verified / known gaps
+  - CI: the 'database' job now also runs 003 (and 002); results unreadable from
+    here (private repository); not rehearsed locally.
+  - Not-found pages return HTTP 200 (streamed) though they show the not-found
+    screen and no data.
+  - Public profiles are readable through the API by visitors who are not signed
+    in, but there is no public page.
+  - No avatar upload; no contact or message feature; no filter by department or
+    batch except through the search words.
+  - 'Confirm email' is still switched off in the hosted project.
+  - Three test images from Sprint 3 may remain in the storage bucket.
+  - Not exercised: 'next start', Safari / iOS, a real phone.
+  - DESIGN.md and the finish design review have not been done.

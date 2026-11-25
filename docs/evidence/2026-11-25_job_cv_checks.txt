@@ -1,0 +1,67 @@
+IIUC Connect — Job application CVs and profile links verification record (D-025)
+Date: 2026-11-25
+Branch: sprint-7-job-cv (cut from sprint-6-mentorship; PR 1 is open and not merged)
+Database: hosted development project zhogqnudiosaqihzvkiq. Migrations applied by hand to it:
+  20261125100000_profile_links, 20261125100100_job_cv.
+
+What was built
+  Database   profiles.portfolio_url and github_url (https only; GitHub host fixed to github.com
+             or www.github.com; portfolio host may not carry credentials).
+             job_applications.cv_path (nullable), constraint applications_cv_path_shape:
+             cv_path = applicant_id/application_id.pdf. Insert grant widened to id and cv_path;
+             cv_path cannot be updated.
+             Private bucket application-cvs: PDF only, 2 MB. Upload policy: verified member, own
+             folder, name must be a uuid + .pdf. Read policy via private.can_read_cv(): the
+             applicant, or the poster of the job while the application is not withdrawn.
+             Admins cannot read CV files (decision D-025).
+             public.cv_purge_candidates(limit): service role only; lists orphan files (over a day
+             old, no application) and files of applications withdrawn over a day ago.
+  App        lib/jobs/cv.ts (file check by content, path builder), lib/jobs/cv-purge.ts,
+             apply form with optional CV and a private-profile note, poster list with a profile
+             link and "Open CV", route /jobs/[id]/cv/[applicationId] (makes a 60-second signed
+             link on click), profile form fields, member page links (shown only if they pass the
+             same https check), cron route now also removes CV files.
+
+Checks run
+  pgTAP  supabase/tests/008_job_cv.test.sql   46/46 on the hosted database (rolled back).
+         First run was 45/46: test 43 failed because the updated_at trigger overwrote the
+         backdated timestamp in the test setup; the code was right. Fixed the test by turning
+         triggers off for that one statement (session_replication_role = replica).
+         Before the migrations existed, the bucket, both columns and the purge function were
+         shown absent (0, 0, 0, 0), so the test could not pass vacuously.
+  Negative control  In a rolled-back transaction the read policy was replaced by one that lets
+         any signed-in member read the bucket. A third member then saw 1 file instead of 0, so
+         the "another member cannot read it" assertion would have failed. The real policy gave
+         the third member 0 and the poster 1.
+  Security advisors  One finding, auth_leaked_password_protection (a Supabase Auth setting,
+         not caused by this change, owner-only). Nothing about the new bucket, policies or
+         functions.
+  npm test         299/299 (new: lib/jobs/cv.test.ts 16, lib/jobs/cv-purge.test.ts 11,
+                   lib/profile/schema.test.ts extended to 54). Each was seen failing first.
+  npm run lint, npm run typecheck, npm run build   pass. The CV route is listed as dynamic.
+  e2e/jobs.py      44/44 against npm run dev, including: a text file named .pdf refused, a PDF
+                   over 2 MB refused, refused attempts leave no application, the CV path has the
+                   expected shape, the poster is redirected to a signed Supabase link that returns
+                   the PDF, the applicant can open their own, another applicant gets 404, a
+                   signed-out visitor is sent to sign in, a direct Storage read as another member
+                   returns 400, after withdrawal the poster gets 404 and a direct read fails while
+                   the applicant can still read their file, profile links save and show to the
+                   poster who clicks the applicant's name.
+  e2e/security_anon.py   anonymous call to cv_purge_candidates denied (42501); anonymous listing
+                   of application-cvs returns an empty list; all security headers present.
+  Visual check     Poster's applicant list at 375 px (e2e/shots/jobs-detail-poster-mobile-light.png):
+                   linked name, message, Open CV link, status, buttons.
+
+Not verified
+  - The cleanup route end to end. SUPABASE_SECRET_KEY and CRON_SECRET are not set locally or on
+    Vercel (owner-only). The listing function is database-tested and the route's logic is
+    unit-tested with fake dependencies, but no real file has been deleted by the route.
+  - Two test CV files (a few dozen bytes each) from the browser runs remain in the application-cvs
+    bucket: deleting storage objects needs the service key. Remove them in the dashboard
+    (Storage, application-cvs) or run the purge once the keys are set (files older than a day).
+  - A CV opened in a real phone browser; only Chromium via Playwright was used.
+  - The CV bucket's 2 MB limit enforced by Storage itself (the app refuses larger files first;
+    the bucket setting itself was only read, not exceeded).
+  - The new pgTAP file and migrations in CI (they run there on the next push).
+  - Poster-side behaviour for a private applicant (no link, a note): written, not exercised
+    in a browser.

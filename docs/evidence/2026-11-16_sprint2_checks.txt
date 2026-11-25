@@ -1,0 +1,119 @@
+IIUC Connect — Sprint 2 verification record (accounts)
+Date: 2026-11-16
+Branch: sprint-2-auth
+
+Sprint 1 base re-checked on the developers' machine
+(Windows 11, Node 26.13.1, npm 11.20.0 — both listed as unverified in the
+Sprint 1 record)
+  npm run lint       pass, 0 problems
+  npm run typecheck  pass
+  npm test           pass, 5 of 5
+  npm run build      pass
+  Hosted database    1 migration applied (20261116104143_identity_schema),
+                     same as the repository
+  Security advisors  0 findings
+  types/database.types.ts  identical to types generated from the hosted schema
+
+Application checks after Sprint 2 (same machine)
+  npm run lint       pass, 0 problems
+  npm run typecheck  pass
+  npm test           pass, 28 of 28
+                     (lib/env.schema.test.ts 5, lib/auth/schemas.test.ts 23)
+  npm run build      pass; routes: / (static), /sign-in, /sign-up, /dashboard
+                     (partial prerender), /auth/confirm (dynamic); proxy active
+  Design detector    0 findings on the changed files
+
+Browser checks (next dev, built-in browser, 375x812 and desktop, light and dark)
+  GET /dashboard?tab=1 while signed out
+                     -> redirected to /sign-in?next=%2Fdashboard%3Ftab%3D1
+  /sign-in?notice=confirm-failed
+                     -> shows the fixed notice text; hidden "next" field set
+  Sign-in submitted with the address "a@b"
+                     -> server action returned the field error "Enter a valid
+                        email address."; email kept, password cleared;
+                        aria-invalid and aria-describedby point at the error
+  Field ids          unique per form instance (label targets its own input
+                     when Next.js keeps the previous route mounted)
+  Console            no errors on a clean load
+
+Automated browser run (Playwright, Chromium, against `next dev`; 28 checks,
+three consecutive runs, 28/28 each time)
+  A throwaway member (already email-confirmed, so no email was sent) was
+  inserted into the hosted database for the run and deleted afterwards.
+  Covered: signed-out redirect keeping ?next; wrong password gives one generic
+  message, keeps the email, clears the password; show/hide password; sign-in
+  ignores a hostile ?next=//evil.example; dashboard heading, member email, three
+  steps and the current-step marker for status email_verified; session survives
+  a reload; /sign-in and /sign-up redirect a signed-in member; sign-out clears
+  the session cookies and re-protects /dashboard; landing links; a garbage
+  /auth/confirm link and a bad `type` are refused and never sign anyone in;
+  unknown ?notice= values show nothing; no uncaught page errors.
+  Screenshots reviewed: dashboard on a 375px phone in light and dark and on a
+  1280px desktop, and the sign-in error state.
+
+Bug found and fixed by that run
+  Next.js reported 'unstable value Date.now() while prerendering' for /dashboard,
+  /sign-in and /sign-up in development. Cause: Supabase's session check reads the
+  clock and Cache Components forbids that inside the prerendered shell. Fix:
+  `await io()` at the top of getCurrentUser() (lib/auth/session.ts). The error
+  no longer appears. (The production build had passed with the bug present, so
+  only a browser run could have found it.)
+
+HTTP-level database checks (hosted API, publishable key, as anon and as the
+throwaway member; 16/16 passed)
+  anon: no profiles visible while the member is unverified; profile_private,
+  verification_events refused.
+  member: sees only their own profile and private row; cannot set role,
+  verification_status, reputation_score, affiliation or student_id; cannot
+  forge a verification event, insert a verification request or delete their
+  profile; CAN edit headline; private helper functions are not exposed (404).
+  This closes the "HTTP-level check" item from the Sprint 1 record.
+
+Clean-up
+  Throwaway member deleted. Hosted database: 0 users, identities, sessions,
+  profiles. One verification_events row remains with user_id null: the
+  append-only log keeps events when an account is deleted (tested in pgTAP).
+  Security advisors after the run: 0 findings.
+
+Sign-up end to end (2026-11-17; Playwright against `next dev`; 12/12 checks
+on a clean database)
+  Precondition: "Confirm email" was switched OFF in the Supabase dashboard by
+  the project owner. It is still off and MUST be switched back on before real
+  members sign up (it is what makes an email address mean anything).
+  Covered: the server refuses a too-short password with a clear message and
+  keeps the email; a real sign-up signs the member in and lands on /dashboard;
+  the dashboard shows "Your email is confirmed" and the member's address; the
+  member can sign out and back in; signing up again with the same address signs
+  nobody in and does not say the account exists; "That is not my email" returns
+  to the form with the address filled in and the password cleared; the original
+  password still works after the duplicate attempt; no uncaught page errors.
+  Database after the real sign-up: one auth user (confirmed), one profile with
+  status email_verified, one private row, exactly one audit event.
+  Test accounts deleted afterwards: 0 users, identities, sessions, profiles;
+  3 audit rows remain with user_id null (append-only log, by design).
+  Security advisors: 0 findings.
+
+Observations from that run
+  - With "Confirm email" off, a duplicate sign-up shows "Check your email" even
+    though nothing is sent (Supabase returns an error that the form hides to
+    avoid revealing which addresses are registered). With "Confirm email" on,
+    Supabase returns a normal-looking success, so the screens match. Behaviour to
+    re-check once the setting is back on.
+  - An early failure in this run was the test script editing the page before
+    React finished hydrating (hydration warning naming minLength). The page
+    alone produces no hydration errors. Script fixed; not an application bug.
+
+Not verified in this run
+  - Sign-up WITH "Confirm email" on: the email that is sent, the link inside
+    it, and the ?code= / ?token_hash= success paths of /auth/confirm (only the
+    failure paths were exercised). Needs a working email provider.
+  - Which email addresses the built-in mailer will deliver to, and its hourly
+    limit, were not measured.
+  - The Supabase Site URL and Redirect URLs settings were not inspected.
+  - The new CI "database" job: its result cannot be read from this machine
+    (private repository, GitHub CLI not signed in). It was not rehearsed
+    locally either (Docker was not running).
+  - The pgTAP file was not re-run after its report query changed to one column.
+  - `next start` (production server) was not browser-tested; `next dev` was.
+  - Safari / iOS, and a real phone, were not tested.
+  - DESIGN.md has not been written and the finish design review has not run.
