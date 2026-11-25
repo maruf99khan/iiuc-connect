@@ -15,7 +15,7 @@ Accounts, verification, the member directory and the mentorship request flow are
 | Supabase project | `iiuc-connect`, ref `zhogqnudiosaqihzvkiq`, Singapore, free plan; the development database (D-016), kept empty between runs |
 | Vercel project | `iiuc-connect`, id `prj_Pm4jRUeatW9D3bYDXO7DIi2Mj5wl`, team `maruf khan's projects` |
 | Framework | Next.js 16.4.6, React 19.3, Tailwind 4, Node 22+ |
-| Latest migration | `20261125100100_job_cv` |
+| Latest migration | `20261125140000_search_members` |
 | CI | GitHub Actions: `verify` (lint, typecheck, test, build) and `database` (all migrations, pgTAP). Supabase CLI pinned to 3.3.0 |
 
 ## Plan against actual (dates from Master File v2.1, section 12)
@@ -26,7 +26,7 @@ Accounts, verification, the member directory and the mentorship request flow are
 | 18 Nov | Authentication, onboarding | Done, with password sign-in instead of email OTP (D-021, Proposed) |
 | 19 Nov | Verification: institutional mailbox, document upload, state machine, audit | Done; institutional-mailbox ID format still unconfirmed |
 | 20 Nov | Admin queue, profile view and edit, privacy | Done |
-| 21–22 Nov | Directory, search, filters; identity tests | Done |
+| 21–22 Nov | Directory, search, filters; identity tests | Done. The search was a plain substring match until 25 Nov, which did not match thesis claim 3; rebuilt to the claimed design (weighted, ranked, typo-tolerant) and measured, D-029 |
 | 23–25 Nov | Mentorship end to end | Core done 24 Nov (rebuilt to the plan, D-018 to D-020); reminders and `.ics` not built |
 | 26 Nov | Jobs | Done 24 Nov: post, apply, shortlist or reject, withdraw, close, delete (D-022). No editing, search or notifications. 25 Nov: CV per application, profile link and portfolio and GitHub fields added (D-025) |
 | 27 Nov | Notifications, reminders, events | In-app notifications done 24 Nov (D-023). Email, reminders and events not started; they need the app's email sender |
@@ -40,12 +40,15 @@ Accounts, verification, the member directory and the mentorship request flow are
 - App: sign-up and sign-in, password reset, onboarding, verification submit and admin review, profiles with privacy, directory with search and filters, mentorship screens at `/sessions` and `/members/[id]`.
 - Jobs board: `jobs` and `job_applications` with RLS, limits and status moves; screens at `/jobs`, `/jobs/new`, `/jobs/[id]`. Applications can carry an optional PDF CV (private bucket, applicant and poster only, admins excluded) and the poster can open the applicant's profile, which can list GitHub and portfolio addresses (D-025).
 - In-app notifications: trigger-made rows for mentorship and job events, owner-only read, `/notifications` and an unread count in the nav.
-- Tests: 347 pgTAP assertions across seven files (the first 301, files 001 to 007, passed in CI; file 008, 46 assertions, passed on the hosted database and has not run in CI yet), 299 unit tests, `e2e/*.py` Playwright scripts including `mentorship.py` (25 checks), `jobs.py` (44) and `notifications.py` (17).
+- Tests: 382 pgTAP assertions across eight files (001 to 008, 347 of them, have run in CI; file 009, 35 assertions, passed on the hosted database and has not run in CI yet), 286 unit tests (13 fewer than before: the tests of the substring helpers D-029 deleted), `e2e/*.py` Playwright scripts including `mentorship.py` (25 checks), `jobs.py` (44), `notifications.py` (17) and `search.py` (20). `e2e/directory.py` predates D-029 and has not been re-run (it needs its own empty world).
 - Demo data: `supabase/demo/demo_data.sql` fills a test database with six members, two mentors with open slots, five jobs and an application; `demo_cleanup.sql` removes it all. The hosted development database currently holds the demo data and two real test accounts (a verified student and an admin), to be deleted after testing.
 - Report records: `docs/plan/Requirements.md` (requirement IDs mapped to tests, seeded 25 Nov, not yet checked line by line) and the Master File's new section 14, "Amendments since v2.1".
-- Evidence for each sprint in `docs/evidence/`; the latest are `2026-11-24_sprint6_checks.txt`, `2026-11-24_jobs_checks.txt` and `2026-11-24_notifications_checks.txt`.
+- Search: `search_members()` ranks by field weight and tolerates typos (D-029). On synthetic data (20 queries, 2,000 members) normalised P@10 is 1.000 against 0.914 for the old search on plain queries and 1.000 against 0.000 on typo queries. Server-side p95 latency is 109 ms at 2,000 members and 274 ms at 5,000 (the old search: 3 and 6 ms); it grows linearly because the search scans every profile.
+- Evidence for each sprint in `docs/evidence/`; the latest are `2026-11-25_search_checks.txt`, `2026-11-25_performance_checks.txt` and `2026-11-25_job_cv_checks.txt`.
 
 ## Next up
+
+00. **Done 25 Nov (D-029), on `main` once pushed:** the directory search rebuilt to thesis claim 3 (weighted, ranked, typo-tolerant), measured and browser-checked. Evidence: `docs/evidence/2026-11-25_search_checks.txt`. Not proven: pgTAP 009 in CI, `e2e/directory.py` against the new search, relevance by real users (UAT).
 
 0. **Done 25 Nov (D-025), merged to `main`, CI green:** an optional PDF CV per job application, a profile link for the poster, and portfolio and GitHub profile fields. Evidence: `docs/evidence/2026-11-25_job_cv_checks.txt`. Not proven: the cleanup route deleting a real file (needs the service key and cron secret). Email notifications and the performance measurement move after the freeze.
 
@@ -79,7 +82,8 @@ Accounts, verification, the member directory and the mentorship request flow are
 
 - Lock `department`, `batch`, `graduation_year` after institutional verification.
 - `npm audit`: moderate advisories in the ESLint toolchain, development only. Re-check before the defense.
-- Performance advisor INFO: `session_feedback_reviewer_id_fkey` has no covering index; `profiles_dept_batch_year_idx` unused.
+- Performance advisor INFO: `session_feedback_reviewer_id_fkey` has no covering index; `profiles_dept_batch_year_idx` unused. `profiles_search_text_idx` (trigram) is no longer used by the directory since D-029 and will be flagged as unused once the advisor has seen it; drop it or keep it for the planned shortlist.
+- Search latency grows linearly with membership (about 55 microseconds per member per query; 274 ms p95 at 5,000 members). No target is set. If the network ever passes a few thousand members, add the GIN index on `search_vector` and a trigram shortlist (D-029).
 - pg_cron jobs were created but have not been seen firing on schedule. The CV cleanup in the daily purge route has not deleted a real file either (needs `SUPABASE_SECRET_KEY` and `CRON_SECRET`).
 - Docker Desktop does not start on Maruf's machine, so the local Supabase stack runs only in CI.
 

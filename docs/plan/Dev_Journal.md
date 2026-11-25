@@ -223,3 +223,27 @@ Later the same afternoon: the production deployment was READY and the address op
 The functions were running in US East while the database is in Singapore. I wanted to measure signed-in pages for that, and the owner gave me authority to create a test account. That does not cover typing the account's password into the live site: only localhost or a marked test host is allowed, whatever the owner says, so I did not. I measured the suspected cause directly instead, with no sign-in: a throwaway route timing five round trips to Supabase, on two previews of the same code (default region, and `vercel.json` with `sin1`), three calls each. Median 799 ms from US East against 37 ms from Singapore, about 21 times lower per query. Applied to `main` (`ae0db18`), D-028; verified after the deploy from the response header (`bom1::sin1`). The throwaway route and its two branches were deleted. Not measured: a signed-in page before and after. That still needs a signed-in browser session, so the page-level gain is unknown and certainly smaller than 21 times.
 
 Also saved a memory note about the owner's delegation and where it stops.
+
+## 2026-11-25 (evening) — Day 9 — Search rebuilt to the claimed design (D-029)
+
+The owner asked for a review of the plan against what is done. Reading the code rather than the records, I found that the directory search (`ILIKE '%word%'` per word, A to Z) was not what Master File 6.4 and thesis claim 3 describe (weighted `tsvector`, `pg_trgm` typo tolerance, ranking), and the deviation was in no log. The owner said to build what the claim says (D-029) rather than rewrite the claim.
+
+Tests first (pgTAP file 009), then migration `20261125140000_search_members`, then the page, then an evaluation of 20 queries against the old search, then a browser check. Result and limits are in `docs/evidence/2026-11-25_search_checks.txt`: on synthetic data normalised P@10 is 1.000 against 0.914 (plain queries) and 1.000 against 0.000 (typo queries); server-side p95 is 109 ms at 2,000 members and 274 ms at 5,000, against 3 and 6 ms for the old search, because the new one scans every profile.
+
+| # | What went wrong | Cause | Fix | Cost |
+|---|---|---|---|---|
+| 1 | Plan said 30 assertions | Miscounted; 33 after the first draft, 35 at the end | Corrected the plan number each time | Seconds |
+| 2 | `create function` failed: permission denied to set `pg_trgm.word_similarity_threshold` | The hosted role cannot set that setting on a function | Dropped the setting | One rerun |
+| 3 | First run: 10 of 33 failed | The hosted database already holds demo members and two real test accounts, so counts were wrong. One failure was real: "xylophone" matched "grameenphone" | Ran later passes with every account deleted inside the rolled-back transaction. Replaced trigram typo matching with edit distance (trigram scores could not separate "rahmin" 0.43 from "xylophone" 0.40) | Two reruns |
+| 4 | A check of mine returned nothing and looked like a pass | I called the function with no signed-in user, so `auth.uid()` is null and every row is excluded | Ran it as a signed-in role through the real test file | Noticed at once |
+| 5 | Design gap found before measuring | The typo path only filtered and added no rank, so a skill match and a bio mention tied on a misspelt word | Scored each word by the weight of the best field it matches; test 15 | One rewrite |
+| 6 | The first evaluation run showed the new search worse on "network engineer" (4 of 10 against 6) | "network" is a prefix of the skill "networking", which scored the same as the job title | Exact words now outscore prefixes (1.0 against 0.9); 10 of 10 at 2,000 members | One rerun |
+| 7 | A query of only punctuation listed everyone | Cleaning removed every character, leaving no word to match | A non-blank query with no searchable character now matches nobody; test 30 | One rerun |
+| 8 | Browser sign-in failed with "Database error querying schema" | My seeded accounts had no `created_at`, `updated_at` or `auth.identities` row | Added them; the seed in `e2e/search.py` now has them | Ten minutes |
+| 9 | My first draft of the evidence file overstated two things ("18 of 20 queries"; who two extra results were) | Written from memory of the table | Corrected to what the output shows before saving | Caught on reread |
+
+Decisions worth recording: edit distance (1 edit for 4 to 5 letters, 2 for 6 or more, none below 4) instead of trigram similarity; ranking by best field per word instead of `ts_rank_cd`; no index, with the ceiling measured and written down; the old helpers and their 13 unit tests deleted rather than left dead.
+
+Not verified: pgTAP 009 in CI; `e2e/directory.py` against the new search (its fixture needs an empty database, and this one holds the demo data and the owner's two test accounts, which I did not touch); real users' judgement of relevance; Bangla-script names; latency at more than 5,000 members (10,000 is extrapolated).
+
+Cleaned up: the five `e2e-search-*` accounts are deleted; the demo data and the two real test accounts are intact (checked by count).

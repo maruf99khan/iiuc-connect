@@ -1,0 +1,81 @@
+IIUC Connect — ranked, typo-tolerant search (D-029): checks of 25 Nov 2026
+===========================================================================
+Thesis claim 3 (Master File 6.4, section 9). Database: hosted development project
+zhogqnudiosaqihzvkiq (Supabase free tier, Singapore). Every run below happened inside
+a transaction that was rolled back; the demo data and the two real test accounts were
+checked afterwards and are intact.
+
+WHAT WAS BUILT
+- profiles.search_vector: weighted tsvector (name A, job title / headline / skills B,
+  company / department / place / industry / batch C, bio D), kept by the existing trigger.
+- public.search_members(query, who, limit, offset): SECURITY INVOKER, so Row Level
+  Security applies. Every query word must match a word of the profile: exactly, as a
+  word start, or (4+ letters) within 1 edit (4-5 letters) or 2 edits (6+) of it.
+  Score per word = weight of the best field it matches x (1.0 exact, 0.9 prefix, 0.8 typo);
+  rank = sum + 0.3 x similarity to the name; ties by name.
+- The directory page calls it; the old ILIKE query and its helpers were deleted.
+- Migration: supabase/migrations/20261125140000_search_members.sql
+- Tests: supabase/tests/009_search_members.test.sql (35 assertions)
+- Evaluation script: supabase/eval/search_eval.sql
+
+WHAT CHANGED DURING THE WORK (kept because the thesis should show it)
+1. A trigram-similarity typo check was tried first and replaced: "xylophone" scored 0.40
+   against "grameenphone" (shared "phone") while a real typo ("rahmin" for "rahim")
+   scored 0.43, so no threshold separated them. Edit distance separates them.
+2. The first version only filtered on typos and added nothing to the rank, so a misspelt
+   query tied skill and bio matches and fell back to alphabetical order. Scoring per word
+   fixed it; test 15 covers it.
+3. First evaluation run (200 members) showed the new search WORSE than the old one on
+   q7 "network engineer" (4 of 10 vs 6 of 10): "network" is a prefix of the skill
+   "networking", which scored the same as the job title. Exact words now outscore
+   prefixes (1.0 vs 0.9). Re-run at 2,000 members: 10 of 10.
+4. A query with nothing searchable ("%", "\") first listed everyone; it now matches
+   nobody, as before. Test 30.
+
+pgTAP, supabase/tests/009_search_members.test.sql (clean fixture, rolled back): 35/35 ok
+  Rank order name > skill > bio, also for a misspelt word; typo, prefix and multi-word
+  cases; private, unverified, self and admin cases (an admin can read a private profile
+  directly but the directory search still hides it); anon refused (42501); paging and the
+  50-row cap; hostile input inert.
+  Note: a first run against the unclean hosted database gave 10 failures that were all
+  fixtures colliding with the existing demo members, plus one genuine false positive
+  ("xylophone", item 1 above). The clean run is the one that counts.
+
+EVALUATION (supabase/eval/search_eval.sql), 20 queries, 2,000 synthetic members
+(1,901 visible), ground truth from structured fields, bio-only mentions NOT relevant
+  14 plain queries  normalised P@10   OLD (substring, A-Z order) 0.914   NEW 1.000
+                    raw P@10          OLD 0.871                          NEW 0.957
+   6 typo queries   normalised P@10   OLD 0.000 (nothing found)          NEW 1.000
+                    raw P@10          OLD 0.000                          NEW 0.900
+  The new search put min(10, relevant people that exist) relevant people in the top 10
+  on all 20 queries. The old one did so on 12 of 14 plain queries (q6 and q7 got 4 of
+  10) and on none of the 6 typo queries.
+  q13 "rahim chowdhury" returned 6 results, 4 of them relevant and ranked first; the other
+  2 were not inspected (most likely people named Karim Chowdhury, one edit from "Rahim").
+  "Normalised P@10" = relevant in top 10 / min(10, relevant that exist). Raw P@10 =
+  relevant in top 10 / 10.
+
+LATENCY (server-side execution as the signed-in role, so RLS included; no network)
+  members   NEW p50    NEW p95    OLD p95
+     200    ~10 ms     13.2 ms    1.0 ms   (run before the exact-over-prefix scoring change)
+   2,000    82.5 ms    108.8 ms   2.8 ms   (200 samples)
+   5,000    204.5 ms   274.3 ms   6.1 ms   (100 samples)
+  Growth is linear (~55 microseconds per member per query): the search scans every visible
+  profile. Roughly 0.5 s p95 would be expected at 10,000 members (extrapolated, not
+  measured). The old search used a trigram index and is flat by comparison.
+  Upgrade path if it ever matters: GIN index on search_vector plus a trigram shortlist
+  before the edit-distance check. A latency target for search has not been set.
+
+NOT PROVEN / LIMITS
+- The data is synthetic and the relevance rules are mine, written independently of the
+  search code but not by a second person. It shows the search does what the design says,
+  not that real users find it better. UAT (30 Nov - 2 Dec) is where that is tested.
+- 20 queries; precision is deterministic, latency is from one session on a shared
+  free-tier database, so absolute numbers will vary.
+- Names are Bangladeshi-style but Latin script; Bangla-script names are untested.
+- The 2,000-member precision run predates change 4 above, which does not touch any of the
+  20 queries. The 35-assertion pgTAP run is on the final function.
+- e2e/directory.py was NOT re-run: it asserts exact counts in its own seeded world, which
+  cannot coexist with the demo data and the two real test accounts on this database.
+  Its expectations about hostile queries ("%", "_", "\") are met by change 4.
+  The browser check of the new search is e2e/search.py.

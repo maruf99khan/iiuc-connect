@@ -24,8 +24,8 @@ Created 2026-11-25. This is the seed for Report Chapter 3.3 and 3.6 and for the 
 | R-PRF-01 | A member can edit their own profile and cannot edit protected fields (role, verification status) | Must | `supabase/tests/001_identity_rls.test.sql`, `lib/profile/schema.test.ts` | Tested |
 | R-PRF-02 | A profile's visibility (public, IIUC community, private) is enforced by the database | Must | `supabase/tests/001_identity_rls.test.sql`, `003_profiles_directory.test.sql` | Tested |
 | R-PRF-03 | Contact details are readable only by the owner and admins | Must | `supabase/tests/001_identity_rls.test.sql` | Tested |
-| R-DIR-01 | A verified member can search and filter the directory by name, skill, department, batch and industry | Must | `supabase/tests/003_profiles_directory.test.sql`, `lib/directory/query.test.ts`, `e2e/directory.py` | Tested; relevance (precision@10) not yet measured |
-| R-DIR-02 | Search never returns a profile the viewer may not read | Must | `supabase/tests/003_profiles_directory.test.sql` | Tested |
+| R-DIR-01 | A verified member can search and filter the directory by name, skill, department, batch and industry; results are ranked by field weight and tolerate typos (D-029) | Must | `supabase/tests/009_search_members.test.sql`, `supabase/eval/search_eval.sql`, `e2e/search.py`, `lib/directory/query.test.ts` | Tested; precision@10 and latency measured on synthetic data 25 Nov (`docs/evidence/2026-11-25_search_checks.txt`); `e2e/directory.py` predates D-029 and was not re-run |
+| R-DIR-02 | Search never returns a profile the viewer may not read | Must | `supabase/tests/003_profiles_directory.test.sql`, `009_search_members.test.sql` | Tested |
 | R-MEN-01 | A verified graduate can create a mentor profile and weekly availability, from which 30-minute slots are generated | Must | `supabase/tests/005_mentorship.test.sql`, `lib/mentorship/time.test.ts`, `e2e/mentorship.py` | Tested |
 | R-MEN-02 | A verified member can request a session; a slot cannot be double-booked | Must | `supabase/tests/005_mentorship.test.sql`, `e2e/mentorship.py` | Tested |
 | R-MEN-03 | A mentor can accept (with a meeting link) or decline; unanswered requests expire after 72 hours | Must | `supabase/tests/005_mentorship.test.sql` | Tested; expiry job not seen firing on schedule |
@@ -59,13 +59,13 @@ Created 2026-11-25. This is the seed for Report Chapter 3.3 and 3.6 and for the 
 | Question (Report Plan 1.3) | Answered by |
 |---|---|
 | RQ1: access control at the database layer, verified by denial tests | R-NFR-01, R-AUTH-03, R-PRF-02, R-PRF-03, R-DIR-02, R-VER-04, R-JOB-03 |
-| RQ2: search inside PostgreSQL, precision@10 and latency | R-DIR-01 (measurement still to do) |
+| RQ2: search inside PostgreSQL, precision@10 and latency | R-DIR-01 (measured on synthetic data: 20 queries, 2,000 members; real-user relevance is for the UAT) |
 | RQ3: complete platform on free infrastructure | R-NFR-05 |
 | RQ4: usability of verification and mentorship | R-VER-01, R-MEN-01, R-MEN-02 and the UAT (30 Nov to 2 Dec) |
 
 ## Gaps this file shows
 
-1. No search-relevance measurement for R-DIR-01. For R-NFR-04 only the signed-out sign-in page has been measured, once.
+1. The search measurement for R-DIR-01 is on synthetic data with relevance rules written by one person, and its latency grows linearly with membership (274 ms p95 at 5,000 members). For R-NFR-04 only the signed-out sign-in page has been measured, once.
 2. R-JOB-04's file cleanup has not been seen deleting a real file, and the private-applicant case of R-JOB-05 has not been exercised in a browser.
 3. Several "Tested" rows depend on cron jobs that have not been seen firing on schedule (R-VER-04, R-MEN-03).
 4. The institutional-mailbox requirement, R-VER-05, is open until the student ID format is confirmed.
