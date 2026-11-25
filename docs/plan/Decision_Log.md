@@ -355,3 +355,15 @@ Alternatives considered: Let participants sign up with their own email (more rea
 Trade-offs accepted: Sign-up and email confirmation are not part of what the ten people test, so claims about onboarding usability are limited to the verification-claim task. Ten authors-recruited participants and builder-observers bias the result; the report must say so.
 Source: Master File v2.1 section 10 and 11; Brooke (1996) for the SUS items and scoring.
 Status: Proposed. Kit drafted 25 Nov; the consent wording, retention period, and any ethics sign-off wait on the supervisor. `sus_score.py` passed its self-check and a sample run on invented rows; nothing has been run with real participants.
+
+---
+
+Decision #: D-031
+Date: 2026-11-25
+Module: Frontend
+Decision: Redesign the whole frontend before the 29 Nov freeze: a design-token layer from the IIUC crest (green `#0f5132`, maroon `#7f0218`, navy `#0f0165`), Plus Jakarta Sans through `next/font`, a shared `components/ui` and `components/shell` library, an app shell (desktop top bar, mobile bottom tab bar), and every page rebuilt from those pieces, with the crest and the owner's campus photo. No behaviour, schema or route changes; no new filters; no photo upload; initials avatars.
+Rationale: The owner compared the app with dunite.app and judged ours "not even 5%" of it. Reading the code confirmed why: a 672 px column, nine colours, no components, no icons, no imagery, and a home page that still said search and mentorship were "not open yet".
+Alternatives considered: Restyle only the core screens (the earlier recommendation, superseded when the owner asked for a complete frontend); landing page only; a component library such as shadcn/ui (extra dependencies, still needs our layout); page-by-page Tailwind without a shared layer (inconsistent and slower).
+Trade-offs accepted: About three days of work inside the freeze window, so the testing time is one day; the redesign must finish before UAT starts on 30 Nov. If time runs out the cut order is admin, verify, session forms, notifications, profile (shell and tokens only). The earlier "green + gold" palette was dropped after the crest showed maroon and navy. A web font adds weight; it is dropped if signed-in LCP on Slow 4G exceeds 2.2 s (was 1.8 s).
+Source: `docs/superpowers/specs/2026-11-25-frontend-redesign-design.md`, `docs/superpowers/plans/2026-11-25-frontend-redesign.md`; dunite.app as the owner's reference.
+Status: Accepted by the owner on 25 Nov ("Approved, start"). Final token values are confirmed in the Phase 0 review gate.
