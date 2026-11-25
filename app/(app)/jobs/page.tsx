@@ -3,11 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { Avatar } from "@/components/ui/avatar";
+import { Portrait } from "@/components/ui/avatar";
 import { Badge, type Tone } from "@/components/ui/badge";
 import { SidePanelLayout } from "@/components/ui/browse";
 import { LinkButton } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Alert, EmptyState, Skeleton } from "@/components/ui/feedback";
 import { Icon } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/page-header";
@@ -224,37 +223,45 @@ async function Jobs({ searchParams }: Pick<PageProps<"/jobs">, "searchParams">) 
           ) : jobs.length === 0 ? (
             <EmptyState icon="briefcase" title="No open jobs yet" description="Check again soon." />
           ) : (
-            <ul className="grid gap-4 sm:grid-cols-2">
+            <ul className="flex flex-col">
               {jobs.map((job) => (
-                <Card as="li" key={job.id} interactive className="flex flex-col gap-4">
-                  <div className="flex items-start gap-4">
-                    <Avatar id={job.company} name={job.company} size={56} />
-                    <div className="min-w-0">
-                      <h3 className="text-lg leading-snug font-bold break-words">
-                        <Link
-                          href={`/jobs/${job.id}`}
-                          className="text-foreground no-underline after:absolute after:inset-0 after:rounded-2xl hover:no-underline"
-                        >
-                          {job.title}
-                        </Link>
-                      </h3>
-                      <p className="mt-0.5 text-sm break-words text-muted">{job.company}</p>
+                <li
+                  key={job.id}
+                  className="group relative flex gap-5 border-t border-border py-5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brand"
+                >
+                  {/* Portrait fills its box, so the box sets the size. */}
+                  <div className="w-20 shrink-0 self-start sm:w-24">
+                    <Portrait
+                      id={job.company}
+                      name={job.company}
+                      className="rounded-tr-3xl [&_span]:text-2xl"
+                    />
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <h3 className="text-xl leading-snug font-extrabold break-words">
+                      <Link
+                        href={`/jobs/${job.id}`}
+                        className="font-extrabold text-foreground no-underline after:absolute after:inset-0 group-hover:underline"
+                      >
+                        {job.title}
+                      </Link>
+                    </h3>
+                    <p className="break-words text-muted">{job.company}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
+                      <Badge tone="ink">{JOB_TYPE_LABEL[job.job_type]}</Badge>
+                      {job.location ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name="map-pin" className="size-4" />
+                          {job.location}
+                        </span>
+                      ) : null}
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="clock" className="size-4" />
+                        Posted {relativeTime(job.created_at)}
+                      </span>
                     </div>
                   </div>
-                  <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
-                    <Badge tone="ink">{JOB_TYPE_LABEL[job.job_type]}</Badge>
-                    {job.location ? (
-                      <span className="inline-flex items-center gap-1">
-                        <Icon name="map-pin" className="size-4" />
-                        {job.location}
-                      </span>
-                    ) : null}
-                    <span className="inline-flex items-center gap-1">
-                      <Icon name="clock" className="size-4" />
-                      Posted {relativeTime(job.created_at)}
-                    </span>
-                  </div>
-                </Card>
+                </li>
               ))}
             </ul>
           )}

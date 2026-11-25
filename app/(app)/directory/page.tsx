@@ -3,10 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { BrowseLayout, FilterGroup, FilterLink } from "@/components/ui/browse";
 import { LinkButton } from "@/components/ui/button";
 import { Alert, EmptyState, Skeleton } from "@/components/ui/feedback";
-import { Icon } from "@/components/ui/icons";
 import { Pagination } from "@/components/ui/nav";
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -34,16 +32,11 @@ function DirectorySkeleton() {
   return (
     <>
       <PageHeader title="Member directory" description={DESCRIPTION} />
-      <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10">
-        <Skeleton className="hidden h-56 lg:block" />
-        <div className="flex flex-col gap-6">
-          <Skeleton className="h-12" />
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 6 }, (_, i) => (
-              <Skeleton key={i} className="h-44 rounded-2xl" />
-            ))}
-          </div>
-        </div>
+      <Skeleton className="h-12" />
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+        {Array.from({ length: 8 }, (_, i) => (
+          <Skeleton key={i} className="aspect-[10/11] rounded-tr-[2.75rem]" />
+        ))}
       </div>
     </>
   );
@@ -111,56 +104,67 @@ async function Directory({
     return text ? `/directory?${text}` : "/directory";
   };
 
-  const rail = (
-    <>
-      <FilterGroup title="Show">
-        <FilterLink href={href(1, null)} active={!who}>
-          Students and graduates
-        </FilterLink>
-        <FilterLink href={href(1, "alumni")} active={who === "alumni"}>
-          Graduates
-        </FilterLink>
-        <FilterLink href={href(1, "student")} active={who === "student"}>
-          Students
-        </FilterLink>
-      </FilterGroup>
-      <p className="border-t border-border pt-4 text-sm text-muted">
-        Search by name, skill, company, department, batch or city. Words can be partly typed, and
-        small typos are forgiven.
-      </p>
-    </>
-  );
+  // Who on this page takes mentoring requests, for the marker on their tile. Row Level
+  // Security hides settings the viewer may not read; a failure only drops the marker.
+  const { data: mentors } = members.length
+    ? await supabase
+        .from("mentor_profiles")
+        .select("id")
+        .eq("accepting_requests", true)
+        .in(
+          "id",
+          members.map((m) => m.id),
+        )
+    : { data: null };
+  const mentoring = new Set((mentors ?? []).map((m) => m.id));
+
+  const pills = [
+    { label: "Students and graduates", filter: null },
+    { label: "Graduates", filter: "alumni" as const },
+    { label: "Students", filter: "student" as const },
+  ];
 
   return (
     <>
       <PageHeader title="Member directory" description={DESCRIPTION} />
 
-      <BrowseLayout rail={rail}>
-        <form action="/directory" method="get" role="search" className="flex gap-3">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end">
+        <form action="/directory" method="get" role="search" className="flex flex-1 items-end gap-3">
           {who ? <input type="hidden" name="who" value={who} /> : null}
           <label htmlFor="directory-q" className="sr-only">
             Search
           </label>
-          <div className="relative flex-1">
-            <Icon
-              name="search"
-              className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
-            />
-            <input
-              id="directory-q"
-              name="q"
-              type="search"
-              defaultValue={q}
-              maxLength={200}
-              autoComplete="off"
-              placeholder="For example: python cse 45"
-              className="field pl-12"
-            />
-          </div>
+          <input
+            id="directory-q"
+            name="q"
+            type="search"
+            defaultValue={q}
+            maxLength={200}
+            autoComplete="off"
+            placeholder="Name, skill, company or batch"
+            className="field-line flex-1"
+          />
           <button type="submit" className="button button-primary">
             Search
           </button>
         </form>
+        <nav aria-label="Show" className="flex flex-wrap gap-2">
+          {pills.map((p) => (
+            <Link
+              key={p.label}
+              href={href(1, p.filter)}
+              aria-current={who === p.filter ? "true" : undefined}
+              className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-bold no-underline ${
+                who === p.filter
+                  ? "border-navy bg-navy text-white"
+                  : "border-ink/40 text-ink hover:bg-ink/8"
+              }`}
+            >
+              {p.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p role="status" className="text-sm font-semibold text-muted">
@@ -176,9 +180,9 @@ async function Directory({
         </div>
 
         {members && members.length > 0 ? (
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
             {members.map((member) => (
-              <MemberCard key={member.id} member={member} />
+              <MemberCard key={member.id} member={member} mentoring={mentoring.has(member.id)} />
             ))}
           </ul>
         ) : pastTheEnd ? null : (
@@ -201,7 +205,6 @@ async function Directory({
           previousLabel="Previous page"
           nextLabel="Next page"
         />
-      </BrowseLayout>
     </>
   );
 }

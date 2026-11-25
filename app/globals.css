@@ -175,6 +175,16 @@ html {
     @apply border-danger;
   }
 
+  /* The editorial search line (D-032): an ink rule instead of a box. */
+  .field-line {
+    @apply block min-h-12 w-full rounded-none bg-transparent px-0 text-lg text-foreground;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .field-line:focus {
+    border-color: var(--accent);
+  }
+
   .skeleton {
     @apply rounded-xl bg-surface-2;
     background-image: linear-gradient(

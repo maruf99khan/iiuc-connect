@@ -4,10 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
 
-import { Avatar } from "@/components/ui/avatar";
+import { Portrait } from "@/components/ui/avatar";
 import { Badge, Chip } from "@/components/ui/badge";
-import { SidePanelLayout } from "@/components/ui/browse";
-import { Card } from "@/components/ui/card";
 import { Alert, Skeleton } from "@/components/ui/feedback";
 import { Icon } from "@/components/ui/icons";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -31,13 +29,14 @@ export default function MemberPage({ params }: PageProps<"/members/[id]">) {
 
 function MemberSkeleton() {
   return (
-    <>
-      <Skeleton className="h-52 rounded-2xl" />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:gap-10">
-        <Skeleton className="h-64 rounded-2xl" />
-        <Skeleton className="h-48 rounded-2xl" />
+    <div className="grid gap-10 lg:grid-cols-[20rem_minmax(0,1fr)]">
+      <Skeleton className="aspect-[10/11] max-w-56 rounded-tr-[2.75rem] lg:max-w-none" />
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-14 w-3/4" />
+        <Skeleton className="h-6 w-1/2" />
+        <Skeleton className="h-40" />
       </div>
-    </>
+    </div>
   );
 }
 
@@ -119,73 +118,56 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
     portfolio && { href: portfolio, text: "Portfolio or personal site (opens in a new tab)" },
   ].filter((l): l is { href: string; text: string } => Boolean(l));
 
-  const header = (
-    <Card padded={false} className="overflow-hidden">
-      <div aria-hidden="true" className="h-28 bg-linear-to-r from-navy via-navy to-brand sm:h-36" />
-      <div className="flex flex-col gap-4 px-5 pb-6 sm:px-8">
-        <Avatar
-          id={member.id}
-          name={name}
-          size={96}
-          className="-mt-12 ring-4 ring-background"
-        />
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-extrabold break-words sm:text-4xl">{name}</h1>
-          {member.headline ? (
-            <p className="text-lg break-words text-muted">{member.headline}</p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {verified ? (
-            <>
-              <Badge tone={alumni ? "accent" : "ink"}>{alumni ? "Alumni" : "Student"}</Badge>
-              <Badge tone="brand" icon="shield-check">
-                Verified
-              </Badge>
-              <p className="text-sm text-muted">{memberLine(member)}</p>
-            </>
-          ) : (
-            <p className="text-muted">Affiliation not verified yet</p>
-          )}
-        </div>
-        {work || member.industry ? (
-          <p className="flex flex-wrap items-center gap-x-5 gap-y-1 text-muted">
-            {work ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Icon name="building" className="size-4" />
-                {work}
-              </span>
-            ) : null}
-            {member.industry ? <span className="text-sm">{member.industry}</span> : null}
-          </p>
+  return (
+    <div className="grid items-start gap-x-12 gap-y-8 lg:grid-cols-[20rem_minmax(0,1fr)]">
+      <Portrait id={member.id} name={name} className="max-w-56 lg:max-w-none" />
+
+      <div className="flex flex-col gap-8 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        {own ? (
+          <Alert tone="info">
+            This is how other members see your profile. <Link href="/profile">Edit it</Link>
+          </Alert>
         ) : null}
-      </div>
-    </Card>
-  );
 
-  const body = (
-    <>
-      {own ? (
-        <Alert tone="info">
-          This is how other members see your profile. <Link href="/profile">Edit it</Link>
-        </Alert>
-      ) : null}
+        <header className="flex flex-col gap-3">
+          <h1 className="text-4xl leading-[1.05] font-extrabold break-words text-ink sm:text-6xl">
+            {name}
+          </h1>
+          {member.headline ? <p className="text-xl break-words">{member.headline}</p> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {verified ? (
+              <>
+                <Badge tone={alumni ? "accent" : "ink"}>{alumni ? "Alumni" : "Student"}</Badge>
+                <Badge tone="brand" icon="shield-check">
+                  Verified
+                </Badge>
+                <p className="text-muted">{memberLine(member)}</p>
+              </>
+            ) : (
+              <p className="text-muted">Affiliation not verified yet</p>
+            )}
+          </div>
+          {work ? (
+            <p className="flex items-center gap-2 text-muted">
+              <Icon name="building" className="size-4" />
+              <span className="break-words">{work}</span>
+            </p>
+          ) : null}
+          {member.industry ? <p className="text-sm text-muted">{member.industry}</p> : null}
+        </header>
 
-      {member.bio ? (
-        <section aria-labelledby="about-heading">
-          <Card className="flex flex-col gap-3">
-            <h2 id="about-heading" className="text-xl font-bold">
+        {member.bio ? (
+          <section aria-labelledby="about-heading" className="flex flex-col gap-3 border-t border-border pt-6">
+            <h2 id="about-heading" className="text-2xl font-extrabold">
               About
             </h2>
-            <p className="max-w-prose leading-7 break-words whitespace-pre-line">{member.bio}</p>
-          </Card>
-        </section>
-      ) : null}
+            <p className="max-w-prose text-lg break-words whitespace-pre-line">{member.bio}</p>
+          </section>
+        ) : null}
 
-      {member.skills.length > 0 ? (
-        <section aria-labelledby="skills-heading">
-          <Card className="flex flex-col gap-4">
-            <h2 id="skills-heading" className="text-xl font-bold">
+        {member.skills.length > 0 ? (
+          <section aria-labelledby="skills-heading" className="flex flex-col gap-4 border-t border-border pt-6">
+            <h2 id="skills-heading" className="text-2xl font-extrabold">
               Skills
             </h2>
             <ul className="flex flex-wrap gap-2">
@@ -195,14 +177,12 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
                 </li>
               ))}
             </ul>
-          </Card>
-        </section>
-      ) : null}
+          </section>
+        ) : null}
 
-      {links.length > 0 ? (
-        <section aria-labelledby="links-heading">
-          <Card className="flex flex-col gap-3">
-            <h2 id="links-heading" className="text-xl font-bold">
+        {links.length > 0 ? (
+          <section aria-labelledby="links-heading" className="flex flex-col gap-2 border-t border-border pt-6">
+            <h2 id="links-heading" className="text-2xl font-extrabold">
               Links
             </h2>
             <ul className="flex flex-col gap-1">
@@ -220,69 +200,54 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
                 </li>
               ))}
             </ul>
-          </Card>
+          </section>
+        ) : null}
+
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          {own && member.affiliation === "alumni" ? <Link href="/sessions">Manage your sessions</Link> : null}
+          <Link href="/directory">Back to the directory</Link>
+        </div>
+      </div>
+
+      {mentor ? (
+        <section
+          aria-labelledby="request-heading"
+          className="rounded-md rounded-tr-[2.75rem] bg-navy p-6 text-white lg:col-start-1 lg:row-start-2"
+        >
+          <h2 id="request-heading" className="text-2xl font-extrabold">
+            Request a session
+          </h2>
+          {!mentor.accepting_requests ? (
+            <p className="mt-2 text-white/85">This graduate is not taking requests right now.</p>
+          ) : slots && slots.length > 0 ? (
+            <>
+              <p className="mt-2 text-sm text-white/85">
+                All times are Bangladesh time. The graduate has 72 hours to answer.
+              </p>
+              <ul className="mt-4 flex flex-col gap-3">
+                {slots.map((slot) => (
+                  <li key={slot.id} className="rounded-xl bg-white/10 p-3">
+                    <p className="flex items-center gap-2 font-bold">
+                      <Icon name="clock" className="size-4" />
+                      {formatDhaka(slot.starts_at)}
+                    </p>
+                    <details className="mt-1">
+                      <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold underline underline-offset-4">
+                        Request this time
+                      </summary>
+                      <div className="mt-2 rounded-xl bg-background p-4 text-foreground">
+                        <RequestForm slotId={slot.id} />
+                      </div>
+                    </details>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="mt-2 text-white/85">No open times right now. Check again soon.</p>
+          )}
         </section>
       ) : null}
-
-      <div className="flex flex-wrap gap-x-6 gap-y-2">
-        {own && member.affiliation === "alumni" ? <Link href="/sessions">Manage your sessions</Link> : null}
-        <Link href="/directory">Back to the directory</Link>
-      </div>
-    </>
-  );
-
-  if (!mentor) {
-    return (
-      <>
-        {header}
-        <div className="flex max-w-3xl flex-col gap-6">{body}</div>
-      </>
-    );
-  }
-
-  const panel = (
-    <section aria-labelledby="request-heading">
-      <h2 id="request-heading" className="text-lg font-bold">
-        Request a session
-      </h2>
-      {!mentor.accepting_requests ? (
-        <p className="mt-2 text-muted">This graduate is not taking requests right now.</p>
-      ) : slots && slots.length > 0 ? (
-        <>
-          <p className="mt-2 text-sm text-muted">
-            All times are Bangladesh time. The graduate has 72 hours to answer.
-          </p>
-          <ul className="mt-4 flex flex-col gap-3">
-            {slots.map((slot) => (
-              <li key={slot.id} className="rounded-xl bg-surface p-3">
-                <p className="flex items-center gap-2 font-semibold">
-                  <Icon name="clock" className="size-4 text-brand" />
-                  {formatDhaka(slot.starts_at)}
-                </p>
-                <details className="mt-1 flex flex-col gap-3">
-                  <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-brand">
-                    Request this time
-                  </summary>
-                  <div className="pt-3">
-                    <RequestForm slotId={slot.id} />
-                  </div>
-                </details>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <p className="mt-2 text-muted">No open times right now. Check again soon.</p>
-      )}
-    </section>
-  );
-
-  return (
-    <>
-      {header}
-      <SidePanelLayout panel={panel} panelLabel="Mentorship">
-        {body}
-      </SidePanelLayout>
-    </>
+    </div>
   );
 }

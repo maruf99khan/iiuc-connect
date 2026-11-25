@@ -34,8 +34,8 @@ export function TopNav({ className }: { className?: string }) {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold no-underline transition-colors duration-150",
-                  active ? "bg-brand/10 text-brand" : "text-muted hover:bg-surface-2 hover:text-foreground",
+                  "inline-flex h-16 items-center px-4 text-sm font-semibold no-underline transition-colors duration-150",
+                  active ? "text-foreground shadow-[inset_0_-3px_0_var(--accent)]" : "text-muted hover:text-foreground",
                 )}
               >
                 {item.label}

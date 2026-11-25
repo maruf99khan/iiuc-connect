@@ -18,7 +18,7 @@ const iconLink =
  */
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-surface">
+    <div className="flex min-h-full flex-1 flex-col bg-background">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-background focus:px-4 focus:py-3 focus:font-semibold focus:text-foreground focus:shadow-lift"
@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
 
-      <header className="sticky top-0 z-30 border-b border-border bg-background">
+      <header className="sticky top-0 z-30 border-b-[3px] border-navy bg-background dark:border-ink/50">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-4 sm:px-6">
           <Link href="/dashboard" className="wordmark flex items-center gap-2.5">
             <Image src="/brand/iiuc-crest.webp" alt="" width={32} height={34} priority className="h-8 w-auto" />

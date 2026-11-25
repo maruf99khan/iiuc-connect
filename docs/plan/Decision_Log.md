@@ -367,3 +367,15 @@ Alternatives considered: Restyle only the core screens (the earlier recommendati
 Trade-offs accepted: About three days of work inside the freeze window, so the testing time is one day; the redesign must finish before UAT starts on 30 Nov. If time runs out the cut order is admin, verify, session forms, notifications, profile (shell and tokens only). The earlier "green + gold" palette was dropped after the crest showed maroon and navy. A web font adds weight; it is dropped if signed-in LCP on Slow 4G exceeds 2.2 s (was 1.8 s).
 Source: `docs/superpowers/specs/2026-11-25-frontend-redesign-design.md`, `docs/superpowers/plans/2026-11-25-frontend-redesign.md`; dunite.app as the owner's reference.
 Status: Accepted by the owner on 25 Nov ("Approved, start"). Final token values are confirmed in the Phase 0 review gate.
+
+---
+
+Decision #: D-032
+Date: 2026-11-26
+Module: Frontend
+Decision: Apply design "C, editorial portraits" across the app: big navy headings, a navy-ruled header with a maroon underline on the active page, an underline search line with pill filters, members as large initials "portrait" tiles with one deeply rounded corner and an "Open to mentor" marker, a profile with a portrait and a navy booking block, a dashboard with a split campus-photo hero, real counts and "Mentors with open times", and jobs as editorial rows. Colours unchanged.
+Rationale: The owner judged the browse-grid layout still basic next to dunite.app and asked to choose from previews before more changes. Three previews were built (`docs/design/previews/redesign-previews.html`); the owner chose C.
+Alternatives considered: A, campus banner (closest to the existing layout, lowest risk; recommended to the owner); B, navy sidebar portal; keeping the D-031 browse grid with its filter rail.
+Trade-offs accepted: Fewer people fit on one screen; the large initials depend on names alone (no photos). The filter rail of D-031 is gone. The dashboard now runs more read-only queries (search, jobs, mentor count, open slots, mentor profiles), all under Row Level Security; signed-in speed has not been re-measured.
+Source: `docs/design/previews/redesign-previews.html`; owner's choice on 26 Nov ("c").
+Status: Accepted and built on branch `redesign/frontend`; not merged.
