@@ -66,6 +66,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(signIn);
   }
 
+  // The landing page invites people to join; a signed-in member goes to their home instead.
+  if (data?.claims && pathname === "/") {
+    const home = request.nextUrl.clone();
+    home.pathname = "/dashboard";
+    home.search = "";
+    const redirect = NextResponse.redirect(home);
+    // Keep any session cookies refreshed above, or the member could be signed out.
+    supabaseResponse.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
+  }
+
   // The response object must be returned as-is so the refreshed cookies
   // reach the browser.
   return supabaseResponse;

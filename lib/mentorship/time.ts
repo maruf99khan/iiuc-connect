@@ -11,6 +11,14 @@ export function formatDhaka(iso: string): string {
   });
 }
 
+/**
+ * Slots must start after this to be offered. The database refuses a request for a slot less
+ * than 30 minutes away; the extra minute covers the time spent filling in the form's first fields.
+ */
+export function bookableAfter(now: Date = new Date()): string {
+  return new Date(now.getTime() + 31 * 60_000).toISOString();
+}
+
 /** An https link with a host, no spaces, no credentials, at most 300 characters. */
 export function isHttpsLink(value: string): boolean {
   if (value.length > 300 || /\s/.test(value)) return false;

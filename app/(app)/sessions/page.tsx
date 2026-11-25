@@ -366,12 +366,12 @@ async function Sessions({
         </section>
       ) : null}
 
+      {/* Only verified graduates can mentor, so nobody else is shown the section. */}
+      {isMentor ? (
       <section aria-labelledby="mentor-heading" className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-5 sm:p-6">
         <h2 id="mentor-heading" className="text-xl font-semibold">
           Mentor settings
         </h2>
-        {isMentor ? (
-          <>
             {mentor.error ? (
               <p role="alert" className="text-danger">
                 {LOAD_ERROR}
@@ -411,13 +411,8 @@ async function Sessions({
             )}
             <h3 className="text-lg font-semibold">Add a window</h3>
             <RuleForm />
-          </>
-        ) : (
-          <p className="max-w-prose leading-7 text-muted">
-            Verified graduates can offer sessions here.
-          </p>
-        )}
       </section>
+      ) : null}
     </div>
   );
 }

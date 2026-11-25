@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 
 import { SiteFooter } from "@/components/shell/site-footer";
 import { SiteHeader } from "@/components/shell/site-header";
@@ -103,17 +102,12 @@ export default function HomePage() {
               <LinkButton
                 href="/sign-up"
                 variant="quiet"
+                size="lg"
                 icon="arrow-right"
                 className="border-transparent bg-white text-navy hover:bg-white/90"
               >
                 Create an account
               </LinkButton>
-              <Link
-                href="/sign-in"
-                className="button border border-white/60 text-white hover:bg-white/15 hover:no-underline"
-              >
-                Sign in
-              </Link>
             </div>
           </div>
         </div>
@@ -223,27 +217,6 @@ export default function HomePage() {
               </li>
             ))}
           </ul>
-        </section>
-
-        <section className="bg-navy py-20 text-white sm:py-24">
-          <div className="mx-auto flex w-full max-w-6xl flex-col items-start gap-8 px-4 sm:px-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-5">
-              <Image src="/brand/iiuc-crest.webp" alt="" width={64} height={68} className="h-16 w-auto" />
-              <div>
-                <h2 className="text-3xl font-extrabold sm:text-4xl">Join the IIUC network</h2>
-                <p className="mt-2 text-lg text-white/85">It takes a few minutes, and it is free.</p>
-              </div>
-            </div>
-            <LinkButton
-              href="/sign-up"
-              variant="quiet"
-              size="lg"
-              icon="arrow-right"
-              className="border-transparent bg-white text-navy hover:bg-white/90"
-            >
-              Create an account
-            </LinkButton>
-          </div>
         </section>
       </main>
 

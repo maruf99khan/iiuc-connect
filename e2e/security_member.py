@@ -35,7 +35,7 @@ with sync_playwright() as p:
         r=pg.goto(B+path); pg.wait_for_timeout(2000)
         out("unverified "+path[:25],(r.status,pg.url.replace(B,""),pg.inner_text("main")[:110].replace("\n"," | ")))
     # XSS in profile
-    pg.goto(B+"/profile"); pg.wait_for_timeout(1500)
+    pg.goto(B+"/profile?edit=1"); pg.wait_for_timeout(1500)
     pf=pg.locator("main form:visible").first
     payload='<img src=x onerror=window.__x=1>"><script>window.__x=1</script>'
     pf.get_by_label(re.compile("Headline")).fill(payload)

@@ -1,9 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { LinkButton } from "@/components/ui/button";
-
-/** Top bar of the public landing page. Sits over the hero, so it is transparent and light. */
+/**
+ * Top bar of the public landing page. Sits over the hero, so it is transparent and light.
+ * It offers only "Sign in": the page's one "Create an account" is in the hero.
+ */
 export function SiteHeader() {
   return (
     <header className="absolute inset-x-0 top-0 z-20">
@@ -12,16 +13,13 @@ export function SiteHeader() {
           <Image src="/brand/iiuc-crest.webp" alt="" width={36} height={38} priority className="h-9 w-auto" />
           IIUC Connect
         </Link>
-        <nav aria-label="Account" className="flex items-center gap-2">
+        <nav aria-label="Account">
           <Link
             href="/sign-in"
-            className="inline-flex min-h-11 items-center rounded-xl px-4 font-semibold text-white no-underline hover:bg-white/15 hover:no-underline"
+            className="inline-flex min-h-11 items-center rounded-xl border border-white/60 px-5 font-semibold text-white no-underline hover:bg-white/15 hover:no-underline"
           >
             Sign in
           </Link>
-          <LinkButton href="/sign-up" variant="quiet" className="hidden sm:inline-flex">
-            Create an account
-          </LinkButton>
         </nav>
       </div>
     </header>

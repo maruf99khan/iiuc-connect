@@ -11,7 +11,7 @@ import { Icon } from "@/components/ui/icons";
 import { getCurrentUser } from "@/lib/auth/session";
 import { memberLine, workLine } from "@/lib/directory/format";
 import { isGithubUrl, isLinkedInUrl, isPortfolioUrl } from "@/lib/profile/schema";
-import { formatDhaka } from "@/lib/mentorship/time";
+import { bookableAfter, formatDhaka } from "@/lib/mentorship/time";
 import { createClient } from "@/lib/supabase/server";
 import { isVerified } from "@/lib/verification/status";
 
@@ -107,7 +107,7 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
         .select("id, starts_at")
         .eq("mentor_id", id)
         .eq("status", "open")
-        .gt("starts_at", new Date().toISOString())
+        .gt("starts_at", bookableAfter())
         .order("starts_at")
         .limit(40)
     : { data: null };

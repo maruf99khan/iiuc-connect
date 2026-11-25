@@ -168,7 +168,7 @@ with sync_playwright() as p:
     check("your own page says it is how others see you", "This is how other members see your profile." in v.inner_text("main"))
 
     # Editing the profile
-    v.goto(f"{BASE}/profile")
+    v.goto(f"{BASE}/profile?edit=1")
     v.get_by_role("heading", level=1).wait_for()
     v.wait_for_timeout(1200)
     check("a verified member has no name field", v.locator('main input[name="fullName"]').count() == 0)
@@ -231,7 +231,7 @@ with sync_playwright() as p:
     u.goto(f"{BASE}/members/{ids['Sara Ahmed']}")
     u.wait_for_url(re.compile(r"/verify"), timeout=15000)
     check("an unverified member opening a profile is sent to /verify", "/verify" in u.url)
-    u.goto(f"{BASE}/profile")
+    u.goto(f"{BASE}/profile?edit=1")
     u.get_by_role("heading", level=1).wait_for()
     u.wait_for_timeout(1200)
     check("an unverified member can still edit their name", u.locator('main input[name="fullName"]').is_visible())

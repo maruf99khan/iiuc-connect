@@ -187,7 +187,7 @@ with sync_playwright() as p:
     check("API: a second application to the same job is refused", s == 409, str(s))
 
     # 3b. Profile links: validation, then saved and shown to the poster who clicks through
-    a.goto(f"{BASE}/profile")
+    a.goto(f"{BASE}/profile?edit=1")
     a.get_by_label("GitHub address").wait_for(timeout=30000)
     a.get_by_label("GitHub address").fill("https://gitlab.com/sid")
     a.get_by_role("button", name="Save profile").click()

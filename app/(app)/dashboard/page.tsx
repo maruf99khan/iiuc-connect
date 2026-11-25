@@ -9,6 +9,7 @@ import { Alert, Skeleton } from "@/components/ui/feedback";
 import { Icon } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/session";
+import { bookableAfter } from "@/lib/mentorship/time";
 import { createClient } from "@/lib/supabase/server";
 import { relativeTime } from "@/lib/ui/format";
 import {
@@ -132,7 +133,7 @@ async function AccountStatus() {
       .limit(4),
     supabase
       .from("mentor_profiles")
-      .select("id", { count: "exact", head: true })
+      .select("id", { count: "exact" })
       .eq("accepting_requests", true)
       .neq("id", user.id),
     supabase
@@ -140,12 +141,17 @@ async function AccountStatus() {
       .select("mentor_id")
       .eq("status", "open")
       .neq("mentor_id", user.id)
-      .gt("starts_at", new Date().toISOString())
+      .gt("starts_at", bookableAfter())
       .order("starts_at")
-      .limit(100),
+      .limit(200),
   ]);
 
-  const soonest = [...new Set((slots.data ?? []).map((s) => s.mentor_id))].slice(0, 4);
+  // A slot can outlive its mentor's "accepting requests" switch, and the database refuses a
+  // request then, so only mentors who are accepting are offered.
+  const accepting = new Set((mentors.data ?? []).map((m) => m.id));
+  const soonest = [...new Set((slots.data ?? []).map((s) => s.mentor_id))]
+    .filter((id) => accepting.has(id))
+    .slice(0, 4);
   const { data: free } = soonest.length
     ? await supabase
         .from("profiles")
@@ -161,7 +167,8 @@ async function AccountStatus() {
   const shown = available.length > 0 ? available : (people.data ?? []);
 
   const counts = [
-    { value: people.data?.[0]?.total, label: "verified members" },
+    // The search leaves out the viewer, hence "other".
+    { value: people.data?.[0]?.total, label: "other members" },
     { value: mentors.count, label: "taking requests" },
     { value: jobs.count, label: "open jobs" },
   ].filter((c) => c.value !== undefined && c.value !== null);
@@ -220,7 +227,7 @@ async function AccountStatus() {
         ) : (
           <ul className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4 lg:gap-x-6">
             {shown.map((member) => (
-              <MemberCard key={member.id} member={member} mentoring={available.length > 0} />
+              <MemberCard key={member.id} member={member} mentoring={accepting.has(member.id)} />
             ))}
           </ul>
         )}

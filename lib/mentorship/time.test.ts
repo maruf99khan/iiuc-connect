@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDhaka, isHttpsLink } from "@/lib/mentorship/time";
+import { bookableAfter, formatDhaka, isHttpsLink } from "@/lib/mentorship/time";
+
+describe("bookableAfter", () => {
+  // The database rejects a slot starting less than 30 minutes from now
+  // (private.requests_before_insert), so the screens must not offer one.
+  it("is later than the database's 30 minute limit, with a small margin", () => {
+    const now = new Date("2026-11-26T06:00:00.000Z");
+    expect(bookableAfter(now)).toBe("2026-11-26T06:31:00.000Z");
+  });
+});
 
 describe("formatDhaka", () => {
   it("shows the day and time in Bangladesh time", () => {
