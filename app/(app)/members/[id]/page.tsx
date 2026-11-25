@@ -4,6 +4,12 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
 
+import { Avatar } from "@/components/ui/avatar";
+import { Badge, Chip } from "@/components/ui/badge";
+import { SidePanelLayout } from "@/components/ui/browse";
+import { Card } from "@/components/ui/card";
+import { Alert, Skeleton } from "@/components/ui/feedback";
+import { Icon } from "@/components/ui/icons";
 import { getCurrentUser } from "@/lib/auth/session";
 import { memberLine, workLine } from "@/lib/directory/format";
 import { isGithubUrl, isLinkedInUrl, isPortfolioUrl } from "@/lib/profile/schema";
@@ -17,9 +23,21 @@ export const metadata: Metadata = { title: "Member" };
 
 export default function MemberPage({ params }: PageProps<"/members/[id]">) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading…</p>}>
+    <Suspense fallback={<MemberSkeleton />}>
       <Member params={params} />
     </Suspense>
+  );
+}
+
+function MemberSkeleton() {
+  return (
+    <>
+      <Skeleton className="h-52 rounded-2xl" />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:gap-10">
+        <Skeleton className="h-64 rounded-2xl" />
+        <Skeleton className="h-48 rounded-2xl" />
+      </div>
+    </>
   );
 }
 
@@ -71,6 +89,8 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
       ? member.portfolio_url
       : null;
   const work = workLine(member);
+  const name = member.full_name || "Name not given";
+  const alumni = member.affiliation === "alumni";
 
   // A graduate's mentor settings and open times, for another verified member to
   // request. Row Level Security already hides a private mentor's slots.
@@ -93,141 +113,176 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
         .limit(40)
     : { data: null };
 
-  return (
-    <>
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-balance break-words">
-          {member.full_name || "Name not given"}
-        </h1>
-        {verified ? (
-          <p className="text-muted">{memberLine(member)}</p>
-        ) : (
-          <p className="text-muted">Affiliation not verified yet</p>
-        )}
-        {work ? <p className="text-muted">{work}</p> : null}
-        {member.industry ? (
-          <p className="text-sm text-muted">{member.industry}</p>
+  const links = [
+    linkedin && { href: linkedin, text: "LinkedIn profile (opens in a new tab)" },
+    github && { href: github, text: "GitHub profile (opens in a new tab)" },
+    portfolio && { href: portfolio, text: "Portfolio or personal site (opens in a new tab)" },
+  ].filter((l): l is { href: string; text: string } => Boolean(l));
+
+  const header = (
+    <Card padded={false} className="overflow-hidden">
+      <div aria-hidden="true" className="h-28 bg-linear-to-r from-navy via-navy to-brand sm:h-36" />
+      <div className="flex flex-col gap-4 px-5 pb-6 sm:px-8">
+        <Avatar
+          id={member.id}
+          name={name}
+          size={96}
+          className="-mt-12 ring-4 ring-background"
+        />
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-extrabold break-words sm:text-4xl">{name}</h1>
+          {member.headline ? (
+            <p className="text-lg break-words text-muted">{member.headline}</p>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {verified ? (
+            <>
+              <Badge tone={alumni ? "accent" : "ink"}>{alumni ? "Alumni" : "Student"}</Badge>
+              <Badge tone="brand" icon="shield-check">
+                Verified
+              </Badge>
+              <p className="text-sm text-muted">{memberLine(member)}</p>
+            </>
+          ) : (
+            <p className="text-muted">Affiliation not verified yet</p>
+          )}
+        </div>
+        {work || member.industry ? (
+          <p className="flex flex-wrap items-center gap-x-5 gap-y-1 text-muted">
+            {work ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Icon name="building" className="size-4" />
+                {work}
+              </span>
+            ) : null}
+            {member.industry ? <span className="text-sm">{member.industry}</span> : null}
+          </p>
         ) : null}
       </div>
+    </Card>
+  );
 
+  const body = (
+    <>
       {own ? (
-        <p
-          role="note"
-          className="rounded-xl border border-border bg-surface px-4 py-3 text-sm leading-6"
-        >
-          This is how other members see your profile.{" "}
-          <Link href="/profile">Edit it</Link>
-        </p>
-      ) : null}
-
-      {member.headline ? (
-        <p className="text-lg leading-7 break-words">{member.headline}</p>
+        <Alert tone="info">
+          This is how other members see your profile. <Link href="/profile">Edit it</Link>
+        </Alert>
       ) : null}
 
       {member.bio ? (
-        <section
-          aria-labelledby="about-heading"
-          className="flex flex-col gap-2"
-        >
-          <h2 id="about-heading" className="text-lg font-semibold">
-            About
-          </h2>
-          <p className="max-w-prose leading-7 break-words whitespace-pre-line">
-            {member.bio}
-          </p>
+        <section aria-labelledby="about-heading">
+          <Card className="flex flex-col gap-3">
+            <h2 id="about-heading" className="text-xl font-bold">
+              About
+            </h2>
+            <p className="max-w-prose leading-7 break-words whitespace-pre-line">{member.bio}</p>
+          </Card>
         </section>
       ) : null}
 
       {member.skills.length > 0 ? (
-        <section
-          aria-labelledby="skills-heading"
-          className="flex flex-col gap-3"
-        >
-          <h2 id="skills-heading" className="text-lg font-semibold">
-            Skills
-          </h2>
-          <ul className="flex flex-wrap gap-2">
-            {member.skills.map((skill) => (
-              <li
-                key={skill}
-                className="rounded-full border border-border px-3 py-1 text-sm break-words"
-              >
-                {skill}
+        <section aria-labelledby="skills-heading">
+          <Card className="flex flex-col gap-4">
+            <h2 id="skills-heading" className="text-xl font-bold">
+              Skills
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {member.skills.map((skill) => (
+                <li key={skill}>
+                  <Chip>{skill}</Chip>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+      ) : null}
+
+      {links.length > 0 ? (
+        <section aria-labelledby="links-heading">
+          <Card className="flex flex-col gap-3">
+            <h2 id="links-heading" className="text-xl font-bold">
+              Links
+            </h2>
+            <ul className="flex flex-col gap-1">
+              {links.map((l) => (
+                <li key={l.href}>
+                  <a
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    className="inline-flex min-h-11 items-center gap-2"
+                  >
+                    <Icon name="link" className="size-4" />
+                    {l.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+      ) : null}
+
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        {own && member.affiliation === "alumni" ? <Link href="/sessions">Manage your sessions</Link> : null}
+        <Link href="/directory">Back to the directory</Link>
+      </div>
+    </>
+  );
+
+  if (!mentor) {
+    return (
+      <>
+        {header}
+        <div className="flex max-w-3xl flex-col gap-6">{body}</div>
+      </>
+    );
+  }
+
+  const panel = (
+    <section aria-labelledby="request-heading">
+      <h2 id="request-heading" className="text-lg font-bold">
+        Request a session
+      </h2>
+      {!mentor.accepting_requests ? (
+        <p className="mt-2 text-muted">This graduate is not taking requests right now.</p>
+      ) : slots && slots.length > 0 ? (
+        <>
+          <p className="mt-2 text-sm text-muted">
+            All times are Bangladesh time. The graduate has 72 hours to answer.
+          </p>
+          <ul className="mt-4 flex flex-col gap-3">
+            {slots.map((slot) => (
+              <li key={slot.id} className="rounded-xl bg-surface p-3">
+                <p className="flex items-center gap-2 font-semibold">
+                  <Icon name="clock" className="size-4 text-brand" />
+                  {formatDhaka(slot.starts_at)}
+                </p>
+                <details className="mt-1 flex flex-col gap-3">
+                  <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-brand">
+                    Request this time
+                  </summary>
+                  <div className="pt-3">
+                    <RequestForm slotId={slot.id} />
+                  </div>
+                </details>
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
+        </>
+      ) : (
+        <p className="mt-2 text-muted">No open times right now. Check again soon.</p>
+      )}
+    </section>
+  );
 
-      {linkedin || github || portfolio ? (
-        <ul className="flex flex-col gap-2">
-          {linkedin ? (
-            <li>
-              <a href={linkedin} target="_blank" rel="noopener noreferrer nofollow">
-                LinkedIn profile (opens in a new tab)
-              </a>
-            </li>
-          ) : null}
-          {github ? (
-            <li>
-              <a href={github} target="_blank" rel="noopener noreferrer nofollow">
-                GitHub profile (opens in a new tab)
-              </a>
-            </li>
-          ) : null}
-          {portfolio ? (
-            <li>
-              <a href={portfolio} target="_blank" rel="noopener noreferrer nofollow">
-                Portfolio or personal site (opens in a new tab)
-              </a>
-            </li>
-          ) : null}
-        </ul>
-      ) : null}
-
-      {mentor ? (
-        <section aria-labelledby="request-heading" className="flex flex-col gap-4">
-          <h2 id="request-heading" className="text-lg font-semibold">
-            Request a session
-          </h2>
-          {!mentor.accepting_requests ? (
-            <p className="text-muted">This graduate is not taking requests right now.</p>
-          ) : slots && slots.length > 0 ? (
-            <>
-              <p className="text-sm text-muted">
-                All times are Bangladesh time. The graduate has 72 hours to answer.
-              </p>
-              <ul className="flex flex-col divide-y divide-border border-y border-border">
-                {slots.map((slot) => (
-                  <li key={slot.id} className="flex flex-col gap-3 py-4">
-                    <p className="font-semibold">{formatDhaka(slot.starts_at)}</p>
-                    <details className="flex flex-col gap-3">
-                      <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">
-                        Request this time
-                      </summary>
-                      <div className="pt-3">
-                        <RequestForm slotId={slot.id} />
-                      </div>
-                    </details>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <p className="text-muted">No open times right now. Check again soon.</p>
-          )}
-        </section>
-      ) : null}
-
-      {own && member.affiliation === "alumni" ? (
-        <Link href="/sessions" className="self-start">
-          Manage your sessions
-        </Link>
-      ) : null}
-
-      <Link href="/directory" className="self-start">
-        Back to the directory
-      </Link>
+  return (
+    <>
+      {header}
+      <SidePanelLayout panel={panel} panelLabel="Mentorship">
+        {body}
+      </SidePanelLayout>
     </>
   );
 }

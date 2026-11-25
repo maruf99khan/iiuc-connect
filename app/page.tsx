@@ -68,11 +68,41 @@ export default function HomePage() {
               A verified network for students and graduates of International Islamic University
               Chittagong.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <form
+              action="/directory"
+              method="get"
+              role="search"
+              className="mt-8 flex max-w-2xl flex-col gap-2 rounded-2xl bg-background p-2 shadow-lift sm:flex-row"
+            >
+              <label htmlFor="home-q" className="sr-only">
+                Search members
+              </label>
+              <div className="relative flex-1">
+                <Icon
+                  name="search"
+                  className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
+                />
+                <input
+                  id="home-q"
+                  name="q"
+                  type="search"
+                  maxLength={200}
+                  autoComplete="off"
+                  placeholder="Search people, skills or companies"
+                  className="field border-transparent pl-12"
+                />
+              </div>
+              <button type="submit" className="button button-primary button-lg">
+                Search
+              </button>
+            </form>
+            <p className="mt-3 text-sm text-white/85">
+              The directory is for members, so you will be asked to sign in first.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
               <LinkButton
                 href="/sign-up"
                 variant="quiet"
-                size="lg"
                 icon="arrow-right"
                 className="border-transparent bg-white text-navy hover:bg-white/90"
               >
@@ -80,7 +110,7 @@ export default function HomePage() {
               </LinkButton>
               <Link
                 href="/sign-in"
-                className="button button-lg border border-white/60 text-white hover:bg-white/15 hover:no-underline"
+                className="button border border-white/60 text-white hover:bg-white/15 hover:no-underline"
               >
                 Sign in
               </Link>
