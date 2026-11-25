@@ -2,7 +2,7 @@ import { connection } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 
-/** A small count of unread notifications, shown next to the nav link. */
+/** A small count of unread notifications, pinned to the corner of the bell link. */
 export async function UnreadCount() {
   // Per-member data: render at request time, never prerender or cache it.
   await connection();
@@ -15,7 +15,7 @@ export async function UnreadCount() {
   return (
     <span
       aria-label={`${count} unread`}
-      className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full border border-border px-1.5 text-xs"
+      className="absolute top-0.5 right-0 inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] leading-5 font-bold text-background tabular-nums"
     >
       {count > 99 ? "99+" : count}
     </span>
