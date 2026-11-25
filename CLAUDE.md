@@ -20,9 +20,9 @@ CSE thesis by Maruf Khan and Md Minhajul Alam (supervisor Jamil As-ad). Pre-defe
 
 ## Mechanics
 
-- Branches: `sprint-N-name`, each cut from the previous. Push branches; do **not** merge to `main` or force-push without the user saying so.
-- Database: hosted Supabase project `zhogqnudiosaqihzvkiq` is the development database (D-016). pgTAP files run in one rolled-back transaction. Leave it empty: delete any test accounts and storage files you create.
+- Git (D-027): work on `main`; it deploys to Vercel at `iiuc-connect.vercel.app`, where the testers are. Run the checks below before every push, and push small, descriptive commits. Use a short-lived branch only for something risky (Vercel previews it), merge it with a **merge commit** (never squash: the history is thesis evidence), and never force-push or rewrite history without the user saying so.
+- Database: hosted Supabase project `zhogqnudiosaqihzvkiq` is the development database (D-016) and holds the demo data from `supabase/demo/` for testers (remove it with `demo_cleanup.sql`). pgTAP files run in one rolled-back transaction. Delete any other test accounts and storage files you create.
 - Checks before calling anything done: `npm run lint`, `npm run typecheck`, `npm test`, the pgTAP files via `execute_sql`, the Supabase security advisors after every schema change, and the relevant `e2e/*.py` against `npm run dev`.
 - Next.js here is v16 with Cache Components. Read `node_modules/next/dist/docs/` before writing against its APIs.
-- "Confirm email" is currently **off** for development. It must be on before real members sign up (see README "Before real members sign up").
+- "Confirm email" is **on** (since 24 Nov), so e2e accounts are seeded straight into `auth.users` already confirmed (see README "Browser checks").
 - Windows 11, Git Bash and PowerShell available. The repo's own hooks may ask for facts before edits; state them and retry.

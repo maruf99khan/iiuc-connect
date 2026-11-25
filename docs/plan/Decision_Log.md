@@ -307,3 +307,15 @@ Alternatives considered: Logging each decision as made (more interruptions for t
 Trade-offs accepted: A decision made early in a session can wait hours for its entry. The screenshot pass is a single larger task near the freeze, so it must be put in the plan.
 Source: Report_Plan.md, evidence rules 1 to 5; CLAUDE.md, "How to work".
 Status: Accepted. The Report Plan's evidence rule 2 (screenshots the day a screen is finished) is replaced by this entry.
+
+---
+
+Decision #: D-027
+Date: 2026-11-25
+Module: Process
+Decision: Stop using one branch per sprint. The stacked branches `sprint-2-auth` to `sprint-7-job-cv` (42 commits, one open pull request) are merged into `main` once, with a merge commit. From then on work happens on `main`, which Vercel deploys to the stable address `iiuc-connect.vercel.app`; a short-lived branch is used only for something risky. Each push is preceded by lint, typecheck and the unit tests, and CI runs on every push to `main`.
+Rationale: The owner will do almost all of the coding, so branches and reviews add ceremony without a second reader. Branch previews change address with every branch, so a tester's link and Supabase's Site URL would need updating each sprint; `main` gives one fixed address. A merge commit keeps the 42 commits, which Appendix G and the planned-versus-actual chart depend on.
+Alternatives considered: Keep a branch per sprint (a moving address for testers, a Site URL to edit each time); squash merge (one commit, the history the report cites is lost); a long-lived `develop` branch (a second deploy target with nobody to review into it); rebase merge (rewrites every commit hash, so the references in the evidence files and journal would no longer match).
+Trade-offs accepted: A broken push now reaches the tester's address, so the checks must be run first and CI watched. No pre-merge review by a second person (the supervisor and Minhajul can still review the repository). The old rule "do not merge to main without the user saying so" is replaced by the user's instruction of 25 Nov.
+Source: CLAUDE.md "Mechanics"; Vercel's documentation on production and preview deployments; the owner's decision in chat on 25 Nov 2026.
+Status: Accepted by the owner on 25 Nov ("do whats best practice"). The merge itself is recorded in Build_State and the journal.
