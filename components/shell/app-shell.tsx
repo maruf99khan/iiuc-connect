@@ -32,7 +32,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Image src="/brand/iiuc-crest.webp" alt="" width={32} height={34} priority className="h-8 w-auto" />
             IIUC Connect
           </Link>
-          <TopNav className="ml-6 hidden md:block" />
+          {/* usePathname() is request-time data, so the active highlight streams in. */}
+          <Suspense fallback={<div className="ml-6 hidden h-11 md:block" />}>
+            <TopNav className="ml-6 hidden md:block" />
+          </Suspense>
 
           <div className="ml-auto flex items-center gap-1">
             <Link href="/notifications" className={iconLink}>
@@ -63,7 +66,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <TabBar />
+      <Suspense fallback={<div className="fixed inset-x-0 bottom-0 z-30 h-16 border-t border-border bg-background md:hidden" />}>
+        <TabBar />
+      </Suspense>
     </div>
   );
 }

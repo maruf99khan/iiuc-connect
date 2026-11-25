@@ -121,3 +121,16 @@ Calendar: Thu 26 Nov Phase 0 and group A. Fri 27 groups B and C. Sat 28 Phase 2 
 2. Plus Jakarta Sans via `next/font`, with the system-font fallback if the budget fails.
 3. Three parallel groups after Phase 0 (this is how a three-day window is possible).
 4. The cut order if time runs out.
+
+## 12. Changes made while building Phase 0 (25 Nov, evening)
+
+Made after reading the Impeccable craft rules and the e2e scripts; the code is the truth where it differs from sections 3 to 6.
+- Card radius is 16 px (not 20); elevation is declared once: a hairline at rest, a lift on hover for interactive cards. Buttons are flat.
+- No eyebrow prop on `PageHeader` (the rules ban a label above a heading). No `StatCard` in the shared layer: big-number tiles are a template, and Group B composes the dashboard from `Card` and plain text instead.
+- The landing page does not use a trio of icon-heading-text cards. It uses a three-step sequence, two labelled product examples ("Example search", "Example request") and a plain list.
+- `navy` (`#0f0165`) is a constant colour for photo overlays and dark bands; `ink` switches to a light tint in dark mode and must not be used for those.
+- The shell has no dropdown menu: the bell, a profile icon and a visible **Sign out** button (the e2e scripts click it directly). The mobile tab labels are Home, Directory, Sessions, Jobs, Profile. The unread badge keeps its `N unread` label (an e2e script reads it).
+- Both navs sit in `Suspense` because `usePathname()` is request-time data on dynamic routes (this build failed without it).
+- Sign-up and landing links keep the text "Create an account" (`e2e/auth.py` finds it).
+- The review page is `/kit-preview`, not `_kit` (an underscore folder is private and not routable); it is deleted.
+- `AppShell` makes `main` 1152 px wide. Group pages set their own narrower width for forms (`mx-auto w-full max-w-2xl`).

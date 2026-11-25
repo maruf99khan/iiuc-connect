@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 export function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-full flex-1 lg:grid-cols-2">
-      <aside className="relative hidden overflow-hidden bg-ink lg:block">
+      <aside className="relative hidden overflow-hidden bg-navy lg:block">
         <Image
           src="/brand/campus-aerial.webp"
           alt=""
@@ -18,7 +18,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           sizes="50vw"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-linear-to-t from-ink/95 via-ink/55 to-ink/20" />
+        <div className="absolute inset-0 bg-linear-to-t from-navy/95 via-navy/55 to-navy/20" />
         <div className="relative z-10 flex h-full flex-col justify-between p-12 text-white">
           <Link href="/" className="flex items-center gap-3 text-white no-underline hover:no-underline">
             <Image src="/brand/iiuc-crest.webp" alt="" width={44} height={46} className="h-11 w-auto" />

@@ -20,7 +20,7 @@ export function SiteHeader() {
             Sign in
           </Link>
           <LinkButton href="/sign-up" variant="quiet" className="hidden sm:inline-flex">
-            Create account
+            Create an account
           </LinkButton>
         </nav>
       </div>

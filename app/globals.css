@@ -60,6 +60,8 @@
   --color-ink: var(--ink);
   --color-danger: var(--danger);
   --color-warn: var(--warn);
+  /* The crest's navy, constant in both themes: for photo overlays and bands that stay dark. */
+  --color-navy: #0f0165;
   --radius-xl: 0.75rem;
   --radius-2xl: 1rem;
   --shadow-card: var(--shadow-card);

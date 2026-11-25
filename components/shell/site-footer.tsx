@@ -17,7 +17,7 @@ export function SiteFooter() {
         </div>
         <nav aria-label="Footer" className="flex gap-6 text-sm font-semibold">
           <Link href="/sign-in">Sign in</Link>
-          <Link href="/sign-up">Create account</Link>
+          <Link href="/sign-up">Create an account</Link>
         </nav>
       </div>
     </footer>
