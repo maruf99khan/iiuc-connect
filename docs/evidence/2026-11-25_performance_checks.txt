@@ -1,0 +1,50 @@
+IIUC Connect — First performance and Lighthouse measurement (plan day 28 Nov, brought forward)
+Date: 2026-11-25, about 12:50 Bangladesh time
+Target: https://iiuc-connect.vercel.app/sign-in (production, main at 9586ec8; signed out)
+Tools: Chrome DevTools (lighthouse_audit and performance trace) driven from Claude Code, on the owner's
+  Windows machine in Bangladesh, over the owner's own connection.
+
+Conditions (Report Plan evidence rule 3)
+  Device profile   375 x 812, device pixel ratio 2, mobile and touch emulation
+  CPU              4x slowdown
+  Network          Chrome's preset "Slow 4G", and separately "Slow 3G" (the plan's throttled 3G case)
+  Cache            cold: page reloaded with the cache ignored
+  Runs             ONE run per condition. Lab numbers move between runs; the report needs at least
+                   three runs per condition and a median before any figure is quoted.
+
+Results
+  Lighthouse, mobile, navigation mode (accessibility, best practices, SEO, agentic browsing; this
+  tool does not include the performance category, which is why the traces below were taken)
+    Accessibility 100, Best practices 100, SEO 100, Agentic browsing 100.
+    49 audits passed, 0 failed. Full reports: docs/evidence/lighthouse/report.html and report.json.
+
+  Trace, Slow 4G, CPU 4x
+    LCP 1,634 ms  (TTFB 573 ms + render delay 1,061 ms)
+    CLS 0.00
+  Trace, Slow 3G, CPU 4x
+    LCP 4,929 ms  (TTFB 2,007 ms + render delay 2,922 ms)
+    CLS 0.00
+  Insights raised in both traces: legacy JavaScript, about 14.1 kB that modern browsers do not need
+    (no estimated saving in LCP); document latency on Slow 3G (estimated 1.9 s of FCP and LCP).
+  No field data exists for the page (CrUX: no data).
+
+How to read these
+  - Google's lab thresholds for LCP are 2.5 s good and 4 s poor. Those thresholds are meant for real
+    users' 75th percentile, not for a deliberately throttled lab run, so the Slow 3G figure is a
+    stress result, not a verdict on the site.
+  - On Slow 3G, 2.0 s of the 4.9 s is the first byte, and the throttle itself adds a fixed round
+    trip to every request.
+
+Not measured
+  - Any signed-in page (dashboard, directory, jobs, sessions). They need a logged-in browser session;
+    these are the pages that make server-side database calls and matter most to the plan's claim.
+  - INP (needs real interaction), a repeat run, or the home page.
+  - Search latency and load testing (planned: query timing in the database, k6).
+  - A real phone on a real mobile network.
+
+A finding to follow up (a hypothesis, not yet measured)
+  - Vercel served this request from region iad1 (US East; response header x-vercel-id), while the
+    Supabase project is in Singapore (Build_State). Every server-side query from a signed-in page
+    therefore crosses the world, which would add a round trip per query. Moving the functions to
+    Singapore (sin1) is a one-line vercel.json "regions" setting. Measure a signed-in page before
+    and after to find out whether it matters.

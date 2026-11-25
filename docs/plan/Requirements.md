@@ -49,7 +49,7 @@ Created 2026-11-25. This is the seed for Report Chapter 3.3 and 3.6 and for the 
 | R-NFR-01 | All authorization is enforced by the database (row level security), not only by the app | Must | all `supabase/tests/*.test.sql`, `e2e/security_anon.py`, `e2e/security_member.py` | Tested |
 | R-NFR-02 | The server sends security headers on every response | Must | `lib/security-headers.test.ts`, `e2e/security_anon.py` | Tested |
 | R-NFR-03 | The app is installable on a phone, without offline caching (D-024) | Should | `app/manifest.test.ts` | Built; installing on a real phone not tested |
-| R-NFR-04 | The app works on a slow mobile connection | Should | none | Not measured. Lighthouse and throttled-network runs are planned for after the freeze |
+| R-NFR-04 | The app works on a slow mobile connection | Should | `docs/evidence/2026-11-25_performance_checks.txt`, `docs/evidence/lighthouse/` | Partly measured, one run only, signed-out sign-in page: LCP 1.6 s on Slow 4G and 4.9 s on Slow 3G (4x CPU), CLS 0.00, Lighthouse accessibility, best practices and SEO all 100. Signed-in pages, repeat runs and a real phone are not measured |
 | R-NFR-05 | The whole system runs on free tiers | Must | `Build_State.md` key identifiers (Vercel Hobby, Supabase free) | Built; the limits it imposes are to be written up for RQ3 |
 | R-NFR-06 | The schema, policies and tests can be rebuilt from the repository alone | Must | CI job `database` (all migrations, then pgTAP) | Tested in CI |
 | R-NFR-07 | Required environment variables are validated at start-up | Should | `lib/env.schema.test.ts` | Tested |
@@ -65,7 +65,7 @@ Created 2026-11-25. This is the seed for Report Chapter 3.3 and 3.6 and for the 
 
 ## Gaps this file shows
 
-1. No search-relevance measurement and no performance measurement yet, for R-DIR-01 and R-NFR-04.
+1. No search-relevance measurement for R-DIR-01. For R-NFR-04 only the signed-out sign-in page has been measured, once.
 2. R-JOB-04's file cleanup has not been seen deleting a real file, and the private-applicant case of R-JOB-05 has not been exercised in a browser.
 3. Several "Tested" rows depend on cron jobs that have not been seen firing on schedule (R-VER-04, R-MEN-03).
 4. The institutional-mailbox requirement, R-VER-05, is open until the student ID format is confirmed.
