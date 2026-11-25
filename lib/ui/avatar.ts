@@ -3,8 +3,8 @@ export function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return "?";
   // Code points, not UTF-16 units, so Bangla and other non-Latin letters are not cut in half.
-  const first = (w: string) => Array.from(w)[0].toUpperCase();
-  return words.length === 1 ? first(words[0]) : first(words[0]) + first(words[words.length - 1]);
+  const first = (w: string | undefined) => (Array.from(w ?? "")[0] ?? "").toUpperCase();
+  return first(words[0]) + (words.length > 1 ? first(words[words.length - 1]) : "");
 }
 
 /** Which of the six avatar tints (0 to 5) this id gets. Same id, same colour, everywhere. */

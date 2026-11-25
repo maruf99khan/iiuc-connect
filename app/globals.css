@@ -61,7 +61,7 @@
   --color-danger: var(--danger);
   --color-warn: var(--warn);
   --radius-xl: 0.75rem;
-  --radius-2xl: 1.25rem;
+  --radius-2xl: 1rem;
   --shadow-card: var(--shadow-card);
   --shadow-lift: var(--shadow-lift);
   /* Web font first (self-hosted by next/font); system fonts, including Bangla, as fallback. */
@@ -91,6 +91,12 @@ body {
 input,
 textarea {
   caret-color: var(--brand);
+}
+
+/* Scrollbars and form controls the browser draws follow the theme too. */
+html {
+  scrollbar-color: var(--field-border) transparent;
+  accent-color: var(--brand);
 }
 
 @layer base {
@@ -142,7 +148,7 @@ textarea {
   }
 
   .button-primary {
-    @apply bg-brand text-on-brand shadow-card hover:bg-brand-strong;
+    @apply bg-brand text-on-brand hover:bg-brand-strong;
   }
 
   .button-quiet {
