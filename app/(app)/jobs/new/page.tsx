@@ -53,7 +53,7 @@ async function NewJob() {
       ) : (
         <EmptyState
           icon="shield-check"
-          title="Only verified graduates can post jobs"
+          title="Only verified graduates can post jobs."
           description="Check your verification to see what is left to do."
           action={<LinkButton href="/verify">Check your verification</LinkButton>}
         />

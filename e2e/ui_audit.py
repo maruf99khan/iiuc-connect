@@ -48,7 +48,7 @@ AXE = ROOT.parent / "node_modules" / "axe-core" / "axe.min.js"
 
 PUBLIC = ["/", "/sign-in", "/sign-up", "/forgot-password"]
 SIGNED_IN = ["/dashboard", "/directory", "/directory?q=python", "/jobs", "/jobs/new", "/sessions",
-             "/notifications", "/profile", "/verify"]
+             "/notifications", "/profile", "/profile?edit=1", "/verify"]
 SIZES = {"375": (375, 812), "768": (768, 1024), "1280": (1280, 800)}
 AXE_SIZES = {"375", "1280"}
 TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]

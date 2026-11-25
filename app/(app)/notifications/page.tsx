@@ -89,7 +89,7 @@ async function Notifications({
       ) : rows.length === 0 ? (
         <EmptyState
           icon="bell"
-          title="Nothing yet"
+          title="Nothing yet."
           description="You will see session requests, answers and job applications here."
         />
       ) : (

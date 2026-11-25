@@ -197,7 +197,11 @@ with sync_playwright() as p:
     a.get_by_label("Portfolio or personal site").fill("https://sid.example.com/work")
     a.get_by_role("button", name="Save profile").click()
     a.wait_for_url(re.compile(r"saved=1"), timeout=30000)
-    check("valid GitHub and portfolio addresses are saved", a.get_by_label("GitHub address").input_value() == "https://github.com/sid-student" and a.get_by_label("Portfolio or personal site").input_value() == "https://sid.example.com/work")
+    a.get_by_role("link", name="Edit profile").wait_for(timeout=30000)
+    check("after saving, the profile is shown, not the form", "https://github.com/sid-student" in a.inner_text("main") and a.get_by_label("GitHub address").count() == 0)
+    a.goto(f"{BASE}/profile?edit=1")
+    a.get_by_label("GitHub address").wait_for(timeout=30000)
+    check("valid GitHub and portfolio addresses are saved",a.get_by_label("GitHub address").input_value() == "https://github.com/sid-student" and a.get_by_label("Portfolio or personal site").input_value() == "https://sid.example.com/work")
 
     # 4. Second student; poster sees both; students see only their own
     b = new_ctx()
