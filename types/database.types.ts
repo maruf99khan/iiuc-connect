@@ -493,6 +493,7 @@ export type Database = {
           reputation_score: number
           role: Database["public"]["Enums"]["user_role"]
           search_text: string
+          search_vector: string
           skills: string[]
           updated_at: string
           verification_status: Database["public"]["Enums"]["verification_status"]
@@ -520,6 +521,7 @@ export type Database = {
           reputation_score?: number
           role?: Database["public"]["Enums"]["user_role"]
           search_text?: string
+          search_vector?: string
           skills?: string[]
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -547,6 +549,7 @@ export type Database = {
           reputation_score?: number
           role?: Database["public"]["Enums"]["user_role"]
           search_text?: string
+          search_vector?: string
           skills?: string[]
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -736,6 +739,29 @@ export type Database = {
       mark_evidence_purged: {
         Args: { p_document_ids: string[] }
         Returns: number
+      }
+      search_members: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_query?: string
+          p_who?: Database["public"]["Enums"]["affiliation"]
+        }
+        Returns: {
+          affiliation: Database["public"]["Enums"]["affiliation"] | null
+          batch: string | null
+          company: string | null
+          department: string | null
+          full_name: string
+          graduation_year: number | null
+          headline: string | null
+          id: string
+          job_title: string | null
+          location: string | null
+          rank: number
+          skills: string[]
+          total: number
+        }[]
       }
     }
     Enums: {

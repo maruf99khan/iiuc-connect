@@ -5,15 +5,9 @@ import { Suspense } from "react";
 
 import { getCurrentUser } from "@/lib/auth/session";
 import { memberLine, workLine } from "@/lib/directory/format";
-import {
-  PAGE_SIZE,
-  ilikePattern,
-  parsePage,
-  parseWho,
-  searchWords,
-} from "@/lib/directory/query";
+import { PAGE_SIZE, parsePage, parseWho } from "@/lib/directory/query";
 import { createClient } from "@/lib/supabase/server";
-import { VERIFIED_STATUSES, isVerified } from "@/lib/verification/status";
+import { isVerified } from "@/lib/verification/status";
 
 export const metadata: Metadata = { title: "Member directory" };
 
@@ -58,39 +52,23 @@ async function Directory({
   }
 
   const q = typeof params.q === "string" ? params.q.slice(0, 200) : "";
-  const words = searchWords(q);
   const who = parseWho(params.who);
   const page = parsePage(params.page);
   const from = (page - 1) * PAGE_SIZE;
 
-  // Row Level Security already limits this to profiles the viewer may read.
-  // Private profiles are excluded here as well, because an admin can read them.
-  let query = supabase
-    .from("profiles")
-    .select(
-      "id, full_name, headline, job_title, company, location, department, batch, graduation_year, affiliation, skills",
-      { count: "exact" },
-    )
-    .in("verification_status", [...VERIFIED_STATUSES])
-    .neq("visibility", "private")
-    .neq("id", user.id);
-  for (const word of words) {
-    query = query.ilike("search_text", ilikePattern(word));
-  }
-  if (who) query = query.eq("affiliation", who);
+  // search_members ranks by weight and tolerates typos. It runs as the viewer,
+  // so Row Level Security applies, and it hides private and unverified
+  // profiles and the viewer themselves (an admin can read private ones).
+  const { data: members, error } = await supabase.rpc("search_members", {
+    p_query: q,
+    p_who: who ?? undefined,
+    p_limit: PAGE_SIZE,
+    p_offset: from,
+  });
 
-  const {
-    data: members,
-    count,
-    error,
-  } = await query
-    .order("full_name")
-    .order("id")
-    .range(from, from + PAGE_SIZE - 1);
-
-  // Asking for a page past the end is an empty result, not a failure.
-  const pastTheEnd = error?.code === "PGRST103";
-  if (error && !pastTheEnd) {
+  // A page past the end is an empty result, not a failure.
+  const pastTheEnd = !error && page > 1 && members.length === 0;
+  if (error) {
     return (
       <p role="alert" className="leading-7 text-danger">
         We could not load the directory. Refresh the page to try again.
@@ -98,7 +76,7 @@ async function Directory({
     );
   }
 
-  const total = count ?? 0;
+  const total = members[0]?.total ?? 0;
   const last = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const href = (target: number) => {
     const search = new URLSearchParams();
