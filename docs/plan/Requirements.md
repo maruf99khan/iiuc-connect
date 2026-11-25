@@ -49,7 +49,7 @@ Created 2026-11-25. This is the seed for Report Chapter 3.3 and 3.6 and for the 
 | R-NFR-01 | All authorization is enforced by the database (row level security), not only by the app | Must | all `supabase/tests/*.test.sql`, `e2e/security_anon.py`, `e2e/security_member.py` | Tested |
 | R-NFR-02 | The server sends security headers on every response | Must | `lib/security-headers.test.ts`, `e2e/security_anon.py` | Tested |
 | R-NFR-03 | The app is installable on a phone, without offline caching (D-024) | Should | `app/manifest.test.ts` | Built; installing on a real phone not tested |
-| R-NFR-04 | The app works on a slow mobile connection | Should | `docs/evidence/2026-11-25_performance_checks.txt`, `docs/evidence/lighthouse/` | Partly measured, one run only, signed-out sign-in page: LCP 1.6 s on Slow 4G and 4.9 s on Slow 3G (4x CPU), CLS 0.00, Lighthouse accessibility, best practices and SEO all 100. Functions moved to Singapore next to the database (D-028): median query round trip 799 ms to 37 ms, 15 samples each. Signed-in pages, repeat runs and a real phone are not measured |
+| R-NFR-04 | The app works on a slow mobile connection | Should | `docs/evidence/2026-11-25_performance_checks.txt`, `docs/evidence/lighthouse/` | Partly measured, one run only, signed-out sign-in page: LCP 1.6 s on Slow 4G and 4.9 s on Slow 3G (4x CPU), CLS 0.00, Lighthouse accessibility, best practices and SEO all 100. Functions moved to Singapore next to the database (D-028): median query round trip 799 ms to 37 ms, 15 samples each. Signed-in pages measured the same evening on a local production build against the real database (`2026-11-25_signed_in_performance.txt`, `e2e/perf_signed_in.py`, 5 runs per page): LCP 1.77 to 1.82 s on Slow 4G and 5.17 to 5.24 s on Slow 3G for dashboard, directory, directory search, jobs and sessions, CLS 0.000; demo-sized data, not the live deployment, no real phone |
 | R-NFR-05 | The whole system runs on free tiers | Must | `Build_State.md` key identifiers (Vercel Hobby, Supabase free) | Built; the limits it imposes are to be written up for RQ3 |
 | R-NFR-06 | The schema, policies and tests can be rebuilt from the repository alone | Must | CI job `database` (all migrations, then pgTAP) | Tested in CI |
 | R-NFR-07 | Required environment variables are validated at start-up | Should | `lib/env.schema.test.ts` | Tested |
@@ -65,7 +65,7 @@ Created 2026-11-25. This is the seed for Report Chapter 3.3 and 3.6 and for the 
 
 ## Gaps this file shows
 
-1. The search measurement for R-DIR-01 is on synthetic data with relevance rules written by one person, and its latency grows linearly with membership (274 ms p95 at 5,000 members). For R-NFR-04 only the signed-out sign-in page has been measured, once.
+1. The search measurement for R-DIR-01 is on synthetic data with relevance rules written by one person, and its latency grows linearly with membership (274 ms p95 at 5,000 members). For R-NFR-04 the signed-in pages were measured only on a local build with demo-sized data; the live site and a real phone are not.
 2. R-JOB-04's file cleanup has not been seen deleting a real file, and the private-applicant case of R-JOB-05 has not been exercised in a browser.
 3. Several "Tested" rows depend on cron jobs that have not been seen firing on schedule (R-VER-04, R-MEN-03).
 4. The institutional-mailbox requirement, R-VER-05, is open until the student ID format is confirmed.

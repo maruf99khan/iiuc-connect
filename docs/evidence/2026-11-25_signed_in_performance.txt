@@ -1,0 +1,71 @@
+IIUC Connect — Signed-in page performance (lab), plan day 28 Nov brought forward
+Date: 2026-11-25, evening, Bangladesh time
+Script: e2e/perf_signed_in.py (5 runs per page per profile). Raw output: e2e/perf_results.json and
+  e2e/perf_results_3g.json (git-ignored; the table below is the printed medians).
+
+What was measured
+  A production build (npm run build; npm run start, main at a046bf4) served from the owner's own
+  machine (localhost:3000), talking to the real hosted development database (Supabase, Singapore).
+  It was NOT measured on the Vercel deployment: that would need a password typed into the live site,
+  which is not done. So Vercel's edge, the sin1 function and the real distance from Bangladesh are not
+  in these numbers. The throttle supplies all browser-to-server delay.
+  Account: one verified student (e2e-perf-viewer@example.com, seeded like the other e2e accounts,
+  deleted afterwards; database back to 8 users and 8 profiles). Data: the demo data (9 profiles, 6 jobs),
+  so every list is short. Real pages with hundreds of rows would be heavier.
+
+Conditions (Report Plan evidence rule 3)
+  Device profile   375 x 812, device pixel ratio 2, mobile and touch emulation, Chromium (Playwright)
+  CPU              4x slowdown
+  Network          Chrome's "Slow 4G" preset (1.6 Mbps down, 750 kbps up, 562.5 ms latency), and
+                   separately "Slow 3G" (400 kbps both ways, 2000 ms latency)
+  Cache            cold: every run is a new browser context with the saved sign-in cookies and the HTTP
+                   cache disabled
+  Runs             5 per page per profile; the median is quoted, with min to max
+
+Results (medians of 5)
+  Slow 4G, CPU 4x
+    page                   LCP ms (min to max)   doc end ms   load ms   transferred   CLS
+    /dashboard             1,808 (1,800-1,812)       628       2,186     216 kB       0.000
+    /directory             1,824 (1,824-1,840)       642       2,206     186 kB       0.000
+    /directory?q=python    1,772 (1,768-1,812)       634       2,197     191 kB       0.000
+    /jobs                  1,820 (1,796-1,852)       628       2,202     187 kB       0.000
+    /sessions              1,784 (1,748-1,804)       622       2,461     216 kB       0.000
+  Slow 3G, CPU 4x
+    /dashboard             5,188 (5,156-5,208)     2,224       7,476     163 kB       0.000
+    /directory             5,188 (5,180-5,204)     2,257       7,488     164 kB       0.000
+    /directory?q=python    5,216 (5,200-5,224)     2,252       7,501     163 kB       0.000
+    /jobs                  5,236 (5,180-5,296)     2,249       7,488     163 kB       0.000
+    /sessions              5,172 (5,144-5,192)     2,227       8,874     197 kB       0.000
+  "doc end" is when the streamed part of the HTML document finishes (the part that waits for the
+  database). "load" is the load event. CLS is the worst of the 5 runs. All pages stayed on their own URL
+  (no redirect to sign-in), so they were measured signed in.
+
+How to read these
+  - The five pages are within 50 ms of each other in every run set, and the sign-in page measured the same
+    morning was 1,634 ms (Slow 4G) and 4,929 ms (Slow 3G). So in this setup the time to the largest
+    element is set by the throttled network (fixed round trips for the page, its CSS and its JavaScript),
+    not by which page it is or how much database work it does.
+  - The server sends the pre-rendered page shell at once (first byte about 5 ms) and streams the
+    database-backed content after it. One unthrottled diagnostic run of /directory (one run only, not a
+    measurement) had the document finish at about 220 ms, the page heading and first member visible at
+    about 450 ms. That is the database and server share; it is small beside the throttle.
+  - The spread inside each set is under 100 ms, tighter than real networks vary, because the throttle is
+    deterministic and the server is local. These are lab numbers, not a prediction for a phone.
+  - Google's lab LCP thresholds are 2.5 s good and 4 s poor, meant for real users' 75th percentile, not for
+    a throttled run; the Slow 4G figures sit under 2.5 s and the Slow 3G figures over 4 s.
+  - Transferred size is 163 to 216 kB per page, cold. The Slow 4G figure is larger than the Slow 3G one;
+    I did not find out why.
+
+Not measured
+  - The live Vercel deployment signed in (needs a password typed into the live site); the effect of D-028
+    on a whole page, as opposed to one query.
+  - INP (needs real interaction), a real phone, a real mobile network, field data.
+  - Pages with realistic data volumes; /members/[id], /jobs/[id], /notifications, /admin/verifications.
+  - Lighthouse's own performance score (the tool available here has no performance category).
+  - Load under concurrent users (k6).
+
+Seed and clean-up (development database)
+  Seed: the insert into auth.users, auth.identities and private.transition_verification from the header of
+  e2e/search.py, with the email e2e-perf-viewer@example.com, the id e2e60000-0000-4000-8000-000000000001
+  and the password in e2e/perf_signed_in.py.
+  Clean-up: delete from auth.users where email = 'e2e-perf-viewer@example.com';

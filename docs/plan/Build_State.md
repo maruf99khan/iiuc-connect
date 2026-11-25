@@ -30,7 +30,7 @@ Accounts, verification, the member directory and the mentorship request flow are
 | 23–25 Nov | Mentorship end to end | Core done 24 Nov (rebuilt to the plan, D-018 to D-020); reminders and `.ics` not built |
 | 26 Nov | Jobs | Done 24 Nov: post, apply, shortlist or reject, withdraw, close, delete (D-022). No editing, search or notifications. 25 Nov: CV per application, profile link and portfolio and GitHub fields added (D-025) |
 | 27 Nov | Notifications, reminders, events | In-app notifications done 24 Nov (D-023). Email, reminders and events not started; they need the app's email sender |
-| 28 Nov | PWA, performance, security pass | Security headers done. Installable manifest and icons done 24 Nov, no service worker (D-024). First performance measurement 25 Nov (sign-in page only, one run each: LCP 1.6 s Slow 4G, 4.9 s Slow 3G; Lighthouse 100/100/100); functions moved to Singapore next to the database 25 Nov (D-028): median query round trip 799 ms to 37 ms; signed-in pages and repeat runs still to do |
+| 28 Nov | PWA, performance, security pass | Security headers done. Installable manifest and icons done 24 Nov, no service worker (D-024). First performance measurement 25 Nov (sign-in page only, one run each: LCP 1.6 s Slow 4G, 4.9 s Slow 3G; Lighthouse 100/100/100); functions moved to Singapore next to the database 25 Nov (D-028): median query round trip 799 ms to 37 ms; signed-in pages measured the same evening on a local production build, 5 runs each: LCP 1.8 s Slow 4G and 5.2 s Slow 3G on all five pages, CLS 0 (`docs/evidence/2026-11-25_signed_in_performance.txt`); not yet on the live site or a real phone |
 | 29 Nov | Feature freeze, full test run, evaluation scripts | |
 | 30 Nov – 2 Dec | UAT with 10 participants | Participants not found yet |
 
@@ -44,7 +44,7 @@ Accounts, verification, the member directory and the mentorship request flow are
 - Demo data: `supabase/demo/demo_data.sql` fills a test database with six members, two mentors with open slots, five jobs and an application; `demo_cleanup.sql` removes it all. The hosted development database currently holds the demo data and two real test accounts (a verified student and an admin), to be deleted after testing.
 - Report records: `docs/plan/Requirements.md` (requirement IDs mapped to tests, seeded 25 Nov, not yet checked line by line) and the Master File's new section 14, "Amendments since v2.1".
 - Search: `search_members()` ranks by field weight and tolerates typos (D-029). On synthetic data (20 queries, 2,000 members) normalised P@10 is 1.000 against 0.914 for the old search on plain queries and 1.000 against 0.000 on typo queries. Server-side p95 latency is 109 ms at 2,000 members and 274 ms at 5,000 (the old search: 3 and 6 ms); it grows linearly because the search scans every profile.
-- Evidence for each sprint in `docs/evidence/`; the latest are `2026-11-25_search_checks.txt`, `2026-11-25_performance_checks.txt` and `2026-11-25_job_cv_checks.txt`.
+- Evidence for each sprint in `docs/evidence/`; the latest are `2026-11-25_signed_in_performance.txt`, `2026-11-25_search_checks.txt`, `2026-11-25_performance_checks.txt` and `2026-11-25_job_cv_checks.txt`.
 
 ## Next up
 
