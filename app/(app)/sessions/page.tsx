@@ -185,7 +185,7 @@ async function Sessions({
       {notice ? <Alert tone="success">{notice}</Alert> : null}
       {problem ? <Alert tone="danger">That did not work. Reload the page and try again.</Alert> : null}
 
-      <section aria-labelledby="mine-heading" className="flex flex-col gap-4">
+      <section aria-labelledby="mine-heading" className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-5 sm:p-6">
         <h2 id="mine-heading" className="text-xl font-semibold">
           Your requests
         </h2>
@@ -209,7 +209,7 @@ async function Sessions({
             )}
           </p>
         ) : (
-          <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-background px-5">
+          <ul className="flex flex-col divide-y divide-border">
             {asMentee.map((r) => (
               <li key={r.id} className="flex flex-col gap-2 py-5">
                 <p className="font-semibold">
@@ -247,7 +247,7 @@ async function Sessions({
         )}
       </section>
 
-      <section aria-labelledby="sessions-heading" className="flex flex-col gap-4">
+      <section aria-labelledby="sessions-heading" className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-5 sm:p-6">
         <h2 id="sessions-heading" className="text-xl font-semibold">
           Your sessions
         </h2>
@@ -258,7 +258,7 @@ async function Sessions({
         ) : (sessions.data ?? []).length === 0 ? (
           <p className="leading-7 text-muted">Accepted requests become sessions here.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-background px-5">
+          <ul className="flex flex-col divide-y divide-border">
             {(sessions.data ?? []).map((s) => {
               const request = byId.get(s.request_id);
               const iAmMentor = s.mentor_id === user.id;
@@ -326,14 +326,14 @@ async function Sessions({
       </section>
 
       {isMentor || asMentor.length > 0 ? (
-        <section aria-labelledby="incoming-heading" className="flex flex-col gap-4">
+        <section aria-labelledby="incoming-heading" className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-5 sm:p-6">
           <h2 id="incoming-heading" className="text-xl font-semibold">
             Requests to you
           </h2>
           {live.length === 0 ? (
             <p className="leading-7 text-muted">No requests waiting.</p>
           ) : (
-            <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-background px-5">
+            <ul className="flex flex-col divide-y divide-border">
               {live.map((r) => (
                 <li key={r.id} className="flex flex-col gap-2 py-5">
                   <p className="font-semibold">
@@ -366,7 +366,7 @@ async function Sessions({
         </section>
       ) : null}
 
-      <section aria-labelledby="mentor-heading" className="flex flex-col gap-4">
+      <section aria-labelledby="mentor-heading" className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-5 sm:p-6">
         <h2 id="mentor-heading" className="text-xl font-semibold">
           Mentor settings
         </h2>
@@ -389,7 +389,7 @@ async function Sessions({
                 You have no weekly windows. Add one so members can request you.
               </p>
             ) : (
-              <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-background px-5">
+              <ul className="flex flex-col divide-y divide-border">
                 {(rules.data ?? []).map((rule) => (
                   <li
                     key={rule.id}
