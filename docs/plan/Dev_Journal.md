@@ -247,3 +247,11 @@ Decisions worth recording: edit distance (1 edit for 4 to 5 letters, 2 for 6 or 
 Not verified: pgTAP 009 in CI; `e2e/directory.py` against the new search (its fixture needs an empty database, and this one holds the demo data and the owner's two test accounts, which I did not touch); real users' judgement of relevance; Bangla-script names; latency at more than 5,000 members (10,000 is extrapolated).
 
 Cleaned up: the five `e2e-search-*` accounts are deleted; the demo data and the two real test accounts are intact (checked by count).
+
+## 2026-11-25 (night) — Day 9 — CI result for the search work, and the UAT kit (D-030)
+
+CI for `0ab58a2` finished green (`database` and `verify`), so pgTAP 009 has now run in CI; the "not verified: pgTAP 009 in CI" line in the entry above is closed. My own CI watcher had reported a failure first; that was a script bug (it looked the run up by the short commit hash and got nothing), not a CI failure.
+
+Then built the user-test kit in `docs/uat/`: `UAT_Kit.md` (measures, session prep, script, task cards for everyone, students and alumni, observer sheet, SUS items, consent form, debrief, what to do afterwards), `results_template.csv`, and `sus_score.py` (SUS scoring plus per-task completion and median time). Checked: the scorer's self-test passes and a run on three invented rows gives the numbers worked out by hand (SUS 100 and 75, mean 87.5; blank row skipped). Not checked: the task cards have never been done by anyone, and the tasks assume the demo mentors' slots and the admin approval flow behave as in the e2e runs. `D-030` records the one real choice (pre-made accounts, not sign-up). `docs/uat/results.csv` is git-ignored.
+
+Not done and not mine to do: the consent wording, retention period and any ethics sign-off need the supervisor; the ten participants need recruiting (Minhajul's list in the Master File); a Bangla consent form is not written.

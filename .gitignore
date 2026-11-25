@@ -47,3 +47,6 @@ e2e/*_results.json
 
 # Local-only archive of the v1 plan (11 MB PDF, superseded by Master File v2.1)
 docs/plan/archive/
+
+# UAT results hold participant answers; keep out of git until the supervisor says what may be stored (D-030)
+docs/uat/results.csv

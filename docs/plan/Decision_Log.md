@@ -343,3 +343,15 @@ Alternatives considered: Keep the substring search and rewrite claim 3 and 6.4 t
 Trade-offs accepted: The search scans every visible profile and uses no index, so latency grows linearly with membership: server-side p95 13 ms at 200 members, 109 ms at 2,000 and 274 ms at 5,000 (old search: 1 to 6 ms). That is fine for a pilot and would be about half a second at 10,000 (extrapolated, not measured). Upgrade path: a GIN index on `search_vector` and a trigram shortlist before the edit-distance check. The trigram index on `search_text` is no longer used by the directory (the column stays: tests and an API check read it); drop it if it matters. The extension `fuzzystrmatch` is now required. Relevance was judged on synthetic data against rules I wrote, so it shows the search does what it is designed to do, not that members find it better; UAT tests that.
 Source: Master File v2.1 6.4 and section 9 claim 3; PostgreSQL documentation on text search (`tsvector`, weights) and `fuzzystrmatch` (`levenshtein_less_equal`).
 Status: Accepted by the owner on 25 Nov. Proven by pgTAP file 009 (35 assertions, clean fixture), the evaluation in `docs/evidence/2026-11-25_search_checks.txt` (20 queries, 2,000 members: normalised P@10 1.000 against 0.914 for plain queries and 1.000 against 0.000 for typos) and `e2e/search.py` (20 checks in a browser). Not run: `e2e/directory.py` (needs its own empty world), pgTAP 009 in CI (runs on push).
+
+---
+
+Decision #: D-030
+Date: 2026-11-25
+Module: Evaluation (UAT)
+Decision: Run the user test on pre-made, already verified accounts (plus one unverified account per participant for the verification task only), not on sign-up by the participant. Tasks are written as plain-word cards and scored 0/1/2 with a stopwatch; usability is the 10-item SUS. The kit is `docs/uat/` (script, task cards, observer sheet, SUS, consent form, results sheet, `sus_score.py`).
+Rationale: Master File section 10 asks for task completion, time on task and SUS with 10 participants. Sign-up needs a confirmation email whose link still points at localhost until the Supabase Site URL is set, and a participant's real password must never be typed into a test. Pre-made accounts also keep a 35 to 40 minute session on the product tasks instead of on email delivery.
+Alternatives considered: Let participants sign up with their own email (more realistic for RQ4, but blocked by the Site URL and exposes real passwords and mailboxes); a moderated-only think-aloud with no scoring (richer, but gives no numbers for Chapter 6).
+Trade-offs accepted: Sign-up and email confirmation are not part of what the ten people test, so claims about onboarding usability are limited to the verification-claim task. Ten authors-recruited participants and builder-observers bias the result; the report must say so.
+Source: Master File v2.1 section 10 and 11; Brooke (1996) for the SUS items and scoring.
+Status: Proposed. Kit drafted 25 Nov; the consent wording, retention period, and any ethics sign-off wait on the supervisor. `sus_score.py` passed its self-check and a sample run on invented rows; nothing has been run with real participants.
