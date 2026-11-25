@@ -3,21 +3,49 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { BrowseLayout, FilterGroup, FilterLink } from "@/components/ui/browse";
+import { LinkButton } from "@/components/ui/button";
+import { Alert, EmptyState, Skeleton } from "@/components/ui/feedback";
+import { Icon } from "@/components/ui/icons";
+import { Pagination } from "@/components/ui/nav";
+import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/session";
-import { memberLine, workLine } from "@/lib/directory/format";
 import { PAGE_SIZE, parsePage, parseWho } from "@/lib/directory/query";
 import { createClient } from "@/lib/supabase/server";
 import { isVerified } from "@/lib/verification/status";
 
+import { MemberCard } from "./member-card";
+
 export const metadata: Metadata = { title: "Member directory" };
+
+const DESCRIPTION = "Verified IIUC students and graduates who have chosen to be listed.";
 
 export default function DirectoryPage({
   searchParams,
 }: PageProps<"/directory">) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading the directory…</p>}>
+    <Suspense fallback={<DirectorySkeleton />}>
       <Directory searchParams={searchParams} />
     </Suspense>
+  );
+}
+
+function DirectorySkeleton() {
+  return (
+    <>
+      <PageHeader title="Member directory" description={DESCRIPTION} />
+      <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10">
+        <Skeleton className="hidden h-56 lg:block" />
+        <div className="flex flex-col gap-6">
+          <Skeleton className="h-12" />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }, (_, i) => (
+              <Skeleton key={i} className="h-44 rounded-2xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -36,18 +64,18 @@ async function Directory({
 
   if (!me || !isVerified(me.verification_status)) {
     return (
-      <>
-        <h1 className="text-3xl font-bold tracking-tight text-balance">
-          Member directory
-        </h1>
-        <p className="max-w-prose leading-7 text-muted">
-          The directory is for members whose IIUC affiliation is verified, so
-          everyone in it can trust who they find.
-        </p>
-        <Link href="/verify" className="button button-primary self-start">
-          Verify my IIUC affiliation
-        </Link>
-      </>
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <PageHeader title="Member directory" />
+        <Alert tone="info" title="Verification comes first">
+          The directory is for members whose IIUC affiliation is verified, so everyone in it can
+          trust who they find.
+        </Alert>
+        <div>
+          <LinkButton href="/verify" icon="arrow-right">
+            Verify my IIUC affiliation
+          </LinkButton>
+        </div>
+      </div>
     );
   }
 
@@ -69,127 +97,111 @@ async function Directory({
   // A page past the end is an empty result, not a failure.
   const pastTheEnd = !error && page > 1 && members.length === 0;
   if (error) {
-    return (
-      <p role="alert" className="leading-7 text-danger">
-        We could not load the directory. Refresh the page to try again.
-      </p>
-    );
+    return <Alert tone="danger">We could not load the directory. Refresh the page to try again.</Alert>;
   }
 
   const total = members[0]?.total ?? 0;
   const last = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const href = (target: number) => {
+  const href = (target: number, filter: typeof who = who) => {
     const search = new URLSearchParams();
     if (q.trim()) search.set("q", q.trim());
-    if (who) search.set("who", who);
+    if (filter) search.set("who", filter);
     if (target > 1) search.set("page", String(target));
     const text = search.toString();
     return text ? `/directory?${text}` : "/directory";
   };
 
+  const rail = (
+    <>
+      <FilterGroup title="Show">
+        <FilterLink href={href(1, null)} active={!who}>
+          Students and graduates
+        </FilterLink>
+        <FilterLink href={href(1, "alumni")} active={who === "alumni"}>
+          Graduates
+        </FilterLink>
+        <FilterLink href={href(1, "student")} active={who === "student"}>
+          Students
+        </FilterLink>
+      </FilterGroup>
+      <p className="border-t border-border pt-4 text-sm text-muted">
+        Search by name, skill, company, department, batch or city. Words can be partly typed, and
+        small typos are forgiven.
+      </p>
+    </>
+  );
+
   return (
     <>
-      <div className="flex flex-col gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-balance">
-          Member directory
-        </h1>
-        <p className="max-w-prose leading-7 text-muted">
-          Verified IIUC students and graduates who have chosen to be listed.
-          Search by name, department, batch, skill, company or city.
-        </p>
-      </div>
+      <PageHeader title="Member directory" description={DESCRIPTION} />
 
-      <form
-        action="/directory"
-        method="get"
-        role="search"
-        className="flex flex-col gap-3"
-      >
-        <label htmlFor="directory-q" className="text-sm font-medium">
-          Search
-        </label>
-        <input
-          id="directory-q"
-          name="q"
-          type="search"
-          defaultValue={q}
-          maxLength={200}
-          autoComplete="off"
-          placeholder="For example: python cse 45"
-          className="field"
-        />
-        <div className="flex gap-3">
-          <label htmlFor="directory-who" className="sr-only">
-            Show
+      <BrowseLayout rail={rail}>
+        <form action="/directory" method="get" role="search" className="flex gap-3">
+          {who ? <input type="hidden" name="who" value={who} /> : null}
+          <label htmlFor="directory-q" className="sr-only">
+            Search
           </label>
-          <select
-            id="directory-who"
-            name="who"
-            defaultValue={who ?? ""}
-            className="field flex-1"
-          >
-            <option value="">Students and graduates</option>
-            <option value="student">Students</option>
-            <option value="alumni">Graduates</option>
-          </select>
+          <div className="relative flex-1">
+            <Icon
+              name="search"
+              className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
+            />
+            <input
+              id="directory-q"
+              name="q"
+              type="search"
+              defaultValue={q}
+              maxLength={200}
+              autoComplete="off"
+              placeholder="For example: python cse 45"
+              className="field pl-12"
+            />
+          </div>
           <button type="submit" className="button button-primary">
             Search
           </button>
+        </form>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p role="status" className="text-sm font-semibold text-muted">
+            {pastTheEnd
+              ? "There is no page " + page + " of these results."
+              : total === 0
+                ? "No members match. Try fewer or different words."
+                : `${total} ${total === 1 ? "member" : "members"}${
+                    last > 1 ? `, page ${page} of ${last}` : ""
+                  }`}
+          </p>
+          {pastTheEnd ? <Link href={href(1)}>Go to the first page</Link> : null}
         </div>
-      </form>
 
-      <p role="status" className="text-sm text-muted">
-        {pastTheEnd
-          ? "There is no page " + page + " of these results."
-          : total === 0
-            ? "No members match. Try fewer or different words."
-            : `${total} ${total === 1 ? "member" : "members"}${
-                last > 1 ? `, page ${page} of ${last}` : ""
-              }`}
-      </p>
-      {pastTheEnd ? (
-        <Link href={href(1)} className="self-start">
-          Go to the first page
-        </Link>
-      ) : null}
+        {members && members.length > 0 ? (
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {members.map((member) => (
+              <MemberCard key={member.id} member={member} />
+            ))}
+          </ul>
+        ) : pastTheEnd ? null : (
+          <EmptyState
+            icon="users"
+            title="Nobody found"
+            description="Try fewer words, or a skill or company instead of a name."
+            action={
+              <LinkButton href="/directory" variant="quiet">
+                Clear the search
+              </LinkButton>
+            }
+          />
+        )}
 
-      {members && members.length > 0 ? (
-        <ul className="flex flex-col divide-y divide-border border-y border-border">
-          {members.map((member) => (
-            <li key={member.id} className="flex flex-col gap-1 py-5">
-              <h2 className="text-lg font-semibold break-words">
-                <Link href={`/members/${member.id}`}>{member.full_name}</Link>
-              </h2>
-              <p className="text-sm text-muted">{memberLine(member)}</p>
-              {member.headline ? (
-                <p className="break-words">{member.headline}</p>
-              ) : null}
-              {workLine(member) ? (
-                <p className="text-sm text-muted">{workLine(member)}</p>
-              ) : null}
-              {member.skills.length > 0 ? (
-                <p className="text-sm text-muted">
-                  {member.skills.slice(0, 6).join(", ")}
-                </p>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {last > 1 ? (
-        <nav
-          aria-label="Pages"
-          className="flex items-center justify-between gap-4"
-        >
-          {page > 1 ? (
-            <Link href={href(page - 1)}>Previous page</Link>
-          ) : (
-            <span />
-          )}
-          {page < last ? <Link href={href(page + 1)}>Next page</Link> : <span />}
-        </nav>
-      ) : null}
+        <Pagination
+          page={page}
+          pageCount={last}
+          hrefFor={href}
+          previousLabel="Previous page"
+          nextLabel="Next page"
+        />
+      </BrowseLayout>
     </>
   );
 }
