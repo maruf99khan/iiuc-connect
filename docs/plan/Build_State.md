@@ -4,7 +4,7 @@ Updated: 2026-11-25 · Feature freeze: 29 Nov 2026 · Pre-defense: 5 December 20
 
 ## Today's position
 
-Accounts, verification, the member directory and the mentorship request flow are built and checked on Claude's side. Everything sits on stacked branches (`sprint-2-auth` through `sprint-6-mentorship`) in one open pull request into `main`; nothing has been merged. The pull request is not merge-ready until its CI run is green and the owner-only items below are done. The jobs board and in-app notifications were built the same day, ahead of plan. Email notifications, reminders and the calendar file are next and need the app's own email sender. The Supabase auth email sender (Gmail SMTP) now works.
+Accounts, verification, the member directory and the mentorship request flow are built and checked on Claude's side. Everything was merged into `main` on 25 Nov 2026 with a merge commit (`9586ec8`, 45 commits kept, CI green on the head `05059f6`; D-027). Work now happens on `main`, which Vercel deploys to `iiuc-connect.vercel.app`. The old `sprint-*` branches remain on GitHub as history. The jobs board and in-app notifications were built the same day, ahead of plan. Email notifications, reminders and the calendar file are next and need the app's own email sender. The Supabase auth email sender (Gmail SMTP) now works.
 
 ## Key identifiers
 
@@ -15,7 +15,7 @@ Accounts, verification, the member directory and the mentorship request flow are
 | Supabase project | `iiuc-connect`, ref `zhogqnudiosaqihzvkiq`, Singapore, free plan; the development database (D-016), kept empty between runs |
 | Vercel project | `iiuc-connect`, id `prj_Pm4jRUeatW9D3bYDXO7DIi2Mj5wl`, team `maruf khan's projects` |
 | Framework | Next.js 16.4.6, React 19.3, Tailwind 4, Node 22+ |
-| Latest migration | `20261124150000_notifications` |
+| Latest migration | `20261125100100_job_cv` |
 | CI | GitHub Actions: `verify` (lint, typecheck, test, build) and `database` (all migrations, pgTAP). Supabase CLI pinned to 3.3.0 |
 
 ## Plan against actual (dates from Master File v2.1, section 12)
@@ -47,9 +47,9 @@ Accounts, verification, the member directory and the mentorship request flow are
 
 ## Next up
 
-0. **Done 25 Nov (D-025), on branch `sprint-7-job-cv`, not yet pushed or run in CI:** an optional PDF CV per job application, a profile link for the poster, and portfolio and GitHub profile fields. Evidence: `docs/evidence/2026-11-25_job_cv_checks.txt`. Not proven: the cleanup route deleting a real file (needs the service key and cron secret). Email notifications and the performance measurement move after the freeze.
+0. **Done 25 Nov (D-025), merged to `main`, CI green:** an optional PDF CV per job application, a profile link for the poster, and portfolio and GitHub profile fields. Evidence: `docs/evidence/2026-11-25_job_cv_checks.txt`. Not proven: the cleanup route deleting a real file (needs the service key and cron secret). Email notifications and the performance measurement move after the freeze.
 
-1. CI is green on 2266d2d, a162155, f8b8cba and 0a8a507, so pgTAP files 001 to 007 have all run in CI. Push `sprint-7-job-cv` and read its result (file 008 and the two new migrations have run only on the hosted database); do not merge to `main` until the owner-only items are done.
+1. CI is green on the merged head, so pgTAP files 001 to 008 and every migration have run from scratch in CI. From now on: tests first, lint, typecheck and unit tests before every push to `main`, and read the CI result after it (a broken push reaches the testers).
 2. PWA, performance and security pass (28 Nov). Email notifications and reminders once the app's server has the Gmail sender (a Vercel environment setting).
 3. Negative control for `005_mentorship.test.sql` (a deliberately broken policy must fail it).
 4. Citation audit of the v1 bibliography → `Bibliography.md`. Known wrong: A5 (Farrow and Yuan), M3 (Lall, Chen and Mason). Suspect: R2, A2, M1, M2. Trace problem-statement statistics to primary sources.
@@ -61,7 +61,8 @@ Accounts, verification, the member directory and the mentorship request flow are
 - [x] "Confirm email" turned back on 24 Nov. A real sign-up, the confirmation link and the password-reset link were each tried by hand with real mailboxes and worked.
 - [x] Redirect URLs for `/auth/confirm` and `/auth/reset` on `http://localhost:3000` (done 24 Nov).
 - [x] The two email templates (Confirm signup, Reset password) now link to the app's own pages, with a designed layout. Done 24 Nov.
-- [ ] The same two redirect URLs, and the Site URL, for the production address once the Vercel address is known.
+- [ ] Production address is now known: `https://iiuc-connect.vercel.app`. In Supabase Authentication → URL Configuration set the Site URL to it and keep `/auth/confirm` and `/auth/reset` redirect URLs for it (and for `http://localhost:3000`). Until then confirmation emails link to localhost and testers cannot finish signing up.
+- [ ] Vercel → project Settings → Deployment Protection → Vercel Authentication: switch off, so testers can open the address without a Vercel login (a free database with dummy data, so the owner accepted the exposure on 25 Nov).
 - [ ] `SUPABASE_SECRET_KEY` and `CRON_SECRET` on Vercel, and the daily `vercel.json` cron for `/api/cron/purge-evidence`.
 - [x] First admin on the development database made 24 Nov with the README's SQL; approval of a real student claim was tried by hand and worked. Repeat on any other database.
 - [ ] Delete leftover synthetic images in the verification storage bucket, if any, and the two test CV files in the `application-cvs` bucket (dashboard → Storage), or let the purge do it once the keys are set.

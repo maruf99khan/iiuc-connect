@@ -207,3 +207,13 @@ Decisions worth recording: upload first, then insert the application, so an appl
 Not verified: a real phone; the private-applicant case (no link, a note) in a browser; the 2 MB limit enforced by Storage itself rather than by the app; the new migrations and file 008 in CI. CI was green on a162155, f8b8cba and 0a8a507 (files 001 to 007 have now run in CI).
 
 Next: push the branch and read CI; then the remaining owner items (production URLs, Vercel keys, supervisor answers, UAT participants), the screenshot pass, performance measurement.
+
+## 2026-11-25 (afternoon) — Day 9 — Deploy for a tester, and merge to main (D-027)
+
+The owner wanted a friend to test the app while they keep building. Vercel was already building every pushed branch (GitHub integration, both Supabase environment variables set), so the CV commit was live as a preview. I checked it through Vercel's own access link: the sign-in page rendered fully, the manifest was served and all security headers were present.
+
+Two blockers for a tester: Vercel's login wall is on for every address including the automatic production one, and Supabase's Site URL is still `http://localhost:3000`, so confirmation emails would link to the owner's machine. I tried to switch the wall off through the Vercel connector and the permission system refused; I did not work around it and handed the one click to the owner. The owner then pointed out that stacked sprint branches were too much ceremony for a one-person coding workflow. I agreed: a branch address changes every sprint, and Supabase's Site URL would need editing each time.
+
+Decision D-027: merge once, then work on `main`. I chose a merge commit over a squash (the 42 commits are cited in the report), over a rebase (it would change every hash that the evidence files quote) and over a long-lived `develop` branch (nobody to review into it). I fast-forwarded `sprint-6-mentorship` to `sprint-7-job-cv`, so PR 1 carried everything without a new commit; the first CI summary I read came from the app's cache and still showed the previous head, so I read the checks for the real head commit before merging (`verify`, `database`, Vercel all green on `05059f6`). Merged as `9586ec8`; `main` has 45 commits. `CLAUDE.md` still said "do not merge to main" and "Confirm email is off"; both were stale and are fixed.
+
+Not verified at the time of writing: the production deployment of `main` (building when this was written); the owner's two dashboard steps (Vercel login wall off, Supabase Site URL).
