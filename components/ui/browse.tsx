@@ -10,23 +10,55 @@ import { Icon } from "./icons";
  * From lg the rail is a sticky column; below that it folds into a "Filters" disclosure, which
  * needs no JavaScript. The rail content is rendered twice and one copy is always display:none.
  */
-export function BrowseLayout({ rail, children }: { rail: ReactNode; children: ReactNode }) {
+export function BrowseLayout({
+  rail,
+  railLabel = "Filters",
+  children,
+}: {
+  rail: ReactNode;
+  railLabel?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10">
       <details className="group rounded-2xl border border-border bg-background lg:hidden">
         <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 font-semibold [&::-webkit-details-marker]:hidden">
           <Icon name="menu" />
-          Filters
+          {railLabel}
           <Icon name="chevron-down" className="ml-auto transition-transform duration-150 group-open:rotate-180" />
         </summary>
         <div className="flex flex-col gap-6 border-t border-border p-4">{rail}</div>
       </details>
-      <aside aria-label="Filters" className="hidden lg:block">
+      <aside aria-label={railLabel} className="hidden lg:block">
         <div className="sticky top-24 flex flex-col gap-6 rounded-2xl border border-border bg-background p-5">
           {rail}
         </div>
       </aside>
       <div className="flex min-w-0 flex-col gap-6">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * Results with an always-visible panel beside them (your applications, your sessions). From lg the
+ * panel is a sticky column on the right; below that it stacks under the results. Nothing is hidden
+ * behind a disclosure, so a control inside it is always reachable.
+ */
+export function SidePanelLayout({
+  panel,
+  panelLabel,
+  children,
+}: {
+  panel: ReactNode;
+  panelLabel: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:gap-10">
+      <div className="flex min-w-0 flex-col gap-6">{children}</div>
+      <aside aria-label={panelLabel} className="lg:sticky lg:top-24 lg:self-start">
+        <div className="flex flex-col gap-6 rounded-2xl border border-border bg-background p-5">{panel}</div>
+      </aside>
     </div>
   );
 }
