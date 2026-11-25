@@ -55,6 +55,7 @@ with sync_playwright() as p:
     # 1. Signed out: dashboard redirects and remembers where to go back to.
     page.goto(f"{BASE}/dashboard?tab=1")
     page.wait_for_url(re.compile(r"/sign-in"))
+    page.wait_for_timeout(1500)  # let the page become interactive, as the other scripts do
     check(
         "signed-out /dashboard redirects to sign-in with next",
         "next=%2Fdashboard%3Ftab%3D1" in page.url,
@@ -104,7 +105,7 @@ with sync_playwright() as p:
         "current step is the affiliation step",
         current.count() == 1 and "IIUC affiliation verified" in current.inner_text(),
     )
-    check("not-yet-open step is explained", "not open yet" in body)
+    check("the next step is explained", "Send your details" in body)
     page.screenshot(path=str(OUT / "dashboard-mobile-light.png"), full_page=True)
 
     # 6. Session persists across a reload and is used by sign-in/up pages.

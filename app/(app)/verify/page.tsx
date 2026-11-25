@@ -3,6 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 
+import { Card } from "@/components/ui/card";
+import { Alert, Skeleton } from "@/components/ui/feedback";
+import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { DOCUMENT_KIND_LABELS } from "@/lib/verification/claim";
@@ -14,7 +17,7 @@ export const metadata: Metadata = { title: "Verify your affiliation" };
 
 export default function VerifyPage() {
   return (
-    <Suspense fallback={<p className="text-muted">Loading…</p>}>
+    <Suspense fallback={<Skeleton className="mx-auto h-96 w-full max-w-2xl rounded-2xl" />}>
       <VerifyContent />
     </Suspense>
   );
@@ -50,11 +53,7 @@ async function VerifyContent() {
   ]);
 
   if (!profile) {
-    return (
-      <p role="alert" className="leading-7 text-danger">
-        We could not load your account. Refresh the page to try again.
-      </p>
-    );
+    return <Alert tone="danger">We could not load your account. Refresh the page to try again.</Alert>;
   }
 
   const latest = requests?.[0];
@@ -76,16 +75,14 @@ async function VerifyContent() {
         <Page
           title="Verify your IIUC affiliation"
           intro="Tell us who you are and send a photo or scan of your student ID card or certificate. An admin checks it against the details you give."
+          step={0}
         >
           {latest?.status === "rejected" ? (
-            <p
-              role="status"
-              className="rounded-xl border border-border bg-surface px-4 py-3 text-sm leading-6"
-            >
+            <Alert tone="warn">
               Your last request was not approved
               {latest.review_notes ? `: ${latest.review_notes}` : "."} You can
               send a new one below.
-            </p>
+            </Alert>
           ) : null}
           <ClaimForm defaultName={profile.full_name} />
         </Page>
@@ -96,6 +93,7 @@ async function VerifyContent() {
         <Page
           title="Your request is being reviewed"
           intro="An admin will check it soon. The result appears here and on your dashboard."
+          step={1}
         >
           {latest ? (
             <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
@@ -131,7 +129,7 @@ async function VerifyContent() {
 
     default:
       return (
-        <Page title="You are verified">
+        <Page title="You are verified" step={2}>
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
             <Item label="Status">
               {profile.affiliation === "alumni" ? "IIUC graduate" : "IIUC student"}
@@ -147,27 +145,44 @@ async function VerifyContent() {
   }
 }
 
+const PROGRESS = ["Send your details", "Admin review", "Verified"] as const;
+
 function Page({
   title,
   intro,
+  step,
   children,
 }: {
   title: string;
   intro?: string;
+  /** Which of the three stages this status is at; none before the email is confirmed. */
+  step?: 0 | 1 | 2;
   children: ReactNode;
 }) {
   return (
-    <>
-      <div className="flex flex-col gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-balance">
-          {title}
-        </h1>
-        {intro ? (
-          <p className="max-w-prose leading-7 text-muted">{intro}</p>
-        ) : null}
-      </div>
-      {children}
-    </>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <PageHeader title={title} description={intro} />
+      {step === undefined ? null : (
+        <ol aria-label="Progress" className="grid grid-cols-3 gap-2">
+          {PROGRESS.map((label, i) => (
+            <li
+              key={label}
+              aria-current={i === step ? "step" : undefined}
+              className={`flex flex-col gap-2 border-t-4 pt-2 text-sm font-semibold ${
+                i < step || (i === step && step === 2)
+                  ? "border-brand text-brand"
+                  : i === step
+                    ? "border-brand text-foreground"
+                    : "border-border text-muted"
+              }`}
+            >
+              {label}
+            </li>
+          ))}
+        </ol>
+      )}
+      <Card className="flex flex-col gap-6">{children}</Card>
+    </div>
   );
 }
 

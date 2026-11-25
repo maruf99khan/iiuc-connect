@@ -2,7 +2,10 @@
 
 Seed first (see README "Browser checks"): four accounts e2e-mentor, e2e-student1,
 e2e-student2 and e2e-private @example.com, verified, with mentor profiles for the
-two graduates. Two steps need SQL run by hand; the script prints NEED_SQL and
+two graduates, named "Mia Mentor" and "Priya Private" (the latter private), plus one open
+slot for the private one:
+  insert into public.mentor_slots (mentor_id, starts_at)
+  select id, now() + interval '3 days' from public.profiles where full_name = 'Priya Private'; Two steps need SQL run by hand; the script prints NEED_SQL and
 waits for the marker file named in the message.
 
   expiry:   update public.mentorship_requests set expires_at = now() - interval '1 minute'
@@ -221,7 +224,12 @@ with sync_playwright() as p:
     s, reqs = api("GET", "/rest/v1/mentorship_requests?select=id", s2token)
     check("API: another member cannot read the mentor's requests", s == 200 and reqs == [], str(reqs))
     ptoken = token_for(PRIVATE)
-    s, pslots = api("GET", "/rest/v1/mentor_slots?select=id&status=eq.open&limit=1", ptoken)
+    # The private mentor's own slot (seeded: private members get no generated slots). "Any open
+    # slot" would pick another mentor's when the database holds other mentors.
+    s, mine = api("GET", "/rest/v1/profiles?select=id&full_name=eq.Priya%20Private", ptoken)
+    private_id = mine[0]["id"]
+    s, pslots = api("GET", f"/rest/v1/mentor_slots?select=id&status=eq.open&mentor_id=eq.{private_id}&limit=1", ptoken)
+    check("the private graduate has a slot of their own to try", s == 200 and len(pslots) == 1, str(pslots))
     s, bad = api("POST", "/rest/v1/mentorship_requests", s2token, {
         "slot_id": pslots[0]["id"], "duration_minutes": 20,
         "goal": "Trying a private mentor's slot.", "question_1": "Can I get in?",

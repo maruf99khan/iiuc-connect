@@ -3,9 +3,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { Portrait } from "@/components/ui/avatar";
+import { Badge, type Tone } from "@/components/ui/badge";
+import { SidePanelLayout } from "@/components/ui/browse";
+import { LinkButton } from "@/components/ui/button";
+import { Alert, EmptyState, Skeleton } from "@/components/ui/feedback";
+import { Icon } from "@/components/ui/icons";
+import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/session";
 import { JOB_TYPE_LABEL } from "@/lib/jobs/schemas";
 import { createClient } from "@/lib/supabase/server";
+import { relativeTime } from "@/lib/ui/format";
 import { isVerified } from "@/lib/verification/status";
 
 import { withdrawApplication } from "./actions";
@@ -20,27 +28,37 @@ const NOTICES = {
 
 const LOAD_ERROR = "We could not load this. Reload the page.";
 
-const APPLICATION_TEXT: Record<string, string> = {
-  submitted: "Sent",
-  shortlisted: "Shortlisted",
-  rejected: "Not taken forward",
-  withdrawn: "Withdrawn",
+const APPLICATION: Record<string, { text: string; tone: Tone }> = {
+  submitted: { text: "Sent", tone: "neutral" },
+  shortlisted: { text: "Shortlisted", tone: "brand" },
+  rejected: { text: "Not taken forward", tone: "danger" },
+  withdrawn: { text: "Withdrawn", tone: "neutral" },
 };
 
-function postedOn(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Asia/Dhaka",
-  });
-}
+const DESCRIPTION =
+  "Jobs and internships posted by verified IIUC graduates. Verified members can apply, and the graduate who posted it sees your name and message.";
 
 export default function JobsPage({ searchParams }: PageProps<"/jobs">) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading jobs…</p>}>
+    <Suspense fallback={<JobsSkeleton />}>
       <Jobs searchParams={searchParams} />
     </Suspense>
+  );
+}
+
+function JobsSkeleton() {
+  return (
+    <>
+      <PageHeader title="Jobs" description={DESCRIPTION} />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:gap-10">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="h-40 rounded-2xl" />
+          ))}
+        </div>
+        <Skeleton className="h-64 rounded-2xl" />
+      </div>
+    </>
   );
 }
 
@@ -89,129 +107,166 @@ async function Jobs({ searchParams }: Pick<PageProps<"/jobs">, "searchParams">) 
     (key) => params[key] !== undefined,
   );
 
-  return (
+  const jobs = open.data ?? [];
+  const mineJobs = mine.data ?? [];
+  const applied = applications.data ?? [];
+
+  const panel = (
     <>
-      <div className="flex flex-col gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-balance">Jobs</h1>
-        <p className="max-w-prose leading-7 text-muted">
-          Jobs and internships posted by verified IIUC graduates. Verified
-          members can apply, and the graduate who posted it sees your name and message.
-        </p>
-        {canPost ? (
-          <Link href="/jobs/new" className="button button-primary self-start">
-            Post a job
-          </Link>
-        ) : null}
-      </div>
-
-      {noticeKey ? (
-        <p
-          role="status"
-          className="rounded-xl border border-border bg-surface px-4 py-3 text-sm leading-6"
-        >
-          {NOTICES[noticeKey]}
-        </p>
-      ) : null}
-      {params.problem !== undefined ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-border bg-surface px-4 py-3 text-sm leading-6 text-danger"
-        >
-          That did not work. Reload the page and try again.
-        </p>
-      ) : null}
-
-      <section aria-labelledby="open-heading" className="flex flex-col gap-4">
-        <h2 id="open-heading" className="text-xl font-semibold">
-          Open jobs
-        </h2>
-        {open.error ? (
-          <p role="alert" className="text-danger">
-            {LOAD_ERROR}
-          </p>
-        ) : !verified ? (
-          <p className="leading-7 text-muted">
-            Jobs are for verified members. <Link href="/verify">Verify your affiliation</Link>
-          </p>
-        ) : (open.data ?? []).length === 0 ? (
-          <p className="leading-7 text-muted">No open jobs yet. Check again soon.</p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-border border-y border-border">
-            {(open.data ?? []).map((job) => (
-              <li key={job.id} className="flex flex-col gap-1 py-4">
-                <Link href={`/jobs/${job.id}`} className="font-semibold break-words">
-                  {job.title}
-                </Link>
-                <p className="break-words">
-                  {job.company}
-                  {job.location ? ` · ${job.location}` : ""}
-                </p>
-                <p className="text-sm text-muted">
-                  {JOB_TYPE_LABEL[job.job_type]} · Posted {postedOn(job.created_at)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section aria-labelledby="applied-heading" className="flex flex-col gap-4">
-        <h2 id="applied-heading" className="text-xl font-semibold">
+      <section aria-labelledby="applied-heading">
+        <h2 id="applied-heading" className="text-lg font-bold">
           Your applications
         </h2>
         {applications.error ? (
-          <p role="alert" className="text-danger">
-            {LOAD_ERROR}
-          </p>
-        ) : (applications.data ?? []).length === 0 ? (
-          <p className="leading-7 text-muted">You have not applied to a job yet.</p>
+          <div className="mt-3">
+            <Alert tone="danger">{LOAD_ERROR}</Alert>
+          </div>
+        ) : applied.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">You have not applied to a job yet.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-border border-y border-border">
-            {(applications.data ?? []).map((a) => (
-              <li key={a.id} className="flex flex-col gap-2 py-4">
-                {a.job ? (
-                  <Link href={`/jobs/${a.job.id}`} className="font-semibold break-words">
-                    {a.job.title} at {a.job.company}
-                  </Link>
-                ) : (
-                  <p className="font-semibold">A job that is no longer open</p>
-                )}
-                <span className="self-start rounded-full border border-border px-2 py-0.5 text-xs">
-                  {APPLICATION_TEXT[a.status] ?? a.status}
-                </span>
-                {a.status === "submitted" || a.status === "shortlisted" ? (
-                  <form action={withdrawApplication}>
-                    <input type="hidden" name="applicationId" value={a.id} />
-                    <button type="submit" className="button button-quiet min-h-11 px-4 text-sm">
-                      Withdraw
-                    </button>
-                  </form>
-                ) : null}
-              </li>
-            ))}
+          <ul className="mt-3 flex flex-col gap-3">
+            {applied.map((a) => {
+              const state = APPLICATION[a.status] ?? { text: a.status, tone: "neutral" as Tone };
+              return (
+                <li key={a.id} className="flex flex-col gap-2 rounded-xl bg-surface p-3">
+                  {a.job ? (
+                    <Link
+                      href={`/jobs/${a.job.id}`}
+                      className="text-sm font-semibold break-words text-foreground"
+                    >
+                      {a.job.title} at {a.job.company}
+                    </Link>
+                  ) : (
+                    <p className="text-sm font-semibold">A job that is no longer open</p>
+                  )}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Badge tone={state.tone}>{state.text}</Badge>
+                    {a.status === "submitted" || a.status === "shortlisted" ? (
+                      <form action={withdrawApplication}>
+                        <input type="hidden" name="applicationId" value={a.id} />
+                        <button type="submit" className="button button-quiet min-h-11 px-4 text-sm">
+                          Withdraw
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
 
-      {(mine.data ?? []).length > 0 ? (
-        <section aria-labelledby="posted-heading" className="flex flex-col gap-4">
-          <h2 id="posted-heading" className="text-xl font-semibold">
+      {mineJobs.length > 0 ? (
+        <section aria-labelledby="posted-heading" className="border-t border-border pt-6">
+          <h2 id="posted-heading" className="text-lg font-bold">
             Jobs you posted
           </h2>
-          <ul className="flex flex-col divide-y divide-border border-y border-border">
-            {(mine.data ?? []).map((job) => (
-              <li key={job.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <Link href={`/jobs/${job.id}`} className="font-semibold break-words">
+          <ul className="mt-3 flex flex-col gap-3">
+            {mineJobs.map((job) => (
+              <li
+                key={job.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface p-3"
+              >
+                <Link href={`/jobs/${job.id}`} className="text-sm font-semibold break-words text-foreground">
                   {job.title}
                 </Link>
-                <span className="rounded-full border border-border px-2 py-0.5 text-xs">
+                <Badge tone={job.status === "active" ? "brand" : "neutral"}>
                   {job.status === "active" ? "Open" : "Closed"}
-                </span>
+                </Badge>
               </li>
             ))}
           </ul>
         </section>
       ) : null}
+    </>
+  );
+
+  return (
+    <>
+      <PageHeader
+        title="Jobs"
+        description={DESCRIPTION}
+        actions={
+          canPost ? (
+            <LinkButton href="/jobs/new" icon="plus">
+              Post a job
+            </LinkButton>
+          ) : undefined
+        }
+      />
+
+      {noticeKey ? <Alert tone="success">{NOTICES[noticeKey]}</Alert> : null}
+      {params.problem !== undefined ? (
+        <Alert tone="danger">That did not work. Reload the page and try again.</Alert>
+      ) : null}
+
+      <SidePanelLayout panel={panel} panelLabel="Your activity">
+        <section aria-labelledby="open-heading" className="flex flex-col gap-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="open-heading" className="text-xl font-bold">
+              Open jobs
+            </h2>
+            {verified && !open.error ? (
+              <p className="text-sm font-semibold text-muted tabular-nums">{jobs.length} open</p>
+            ) : null}
+          </div>
+          {open.error ? (
+            <Alert tone="danger">{LOAD_ERROR}</Alert>
+          ) : !verified ? (
+            <EmptyState
+              icon="shield-check"
+              title="Jobs are for verified members"
+              description="Verify your IIUC affiliation to see and apply to jobs."
+              action={<LinkButton href="/verify">Verify your affiliation</LinkButton>}
+            />
+          ) : jobs.length === 0 ? (
+            <EmptyState icon="briefcase" title="No open jobs yet" description="Check again soon." />
+          ) : (
+            <ul className="flex flex-col">
+              {jobs.map((job) => (
+                <li
+                  key={job.id}
+                  className="group relative flex gap-5 border-t border-border py-5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brand"
+                >
+                  {/* Portrait fills its box, so the box sets the size. */}
+                  <div className="w-20 shrink-0 self-start sm:w-24">
+                    <Portrait
+                      id={job.company}
+                      name={job.company}
+                      className="rounded-tr-3xl [&_span]:text-2xl"
+                    />
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <h3 className="text-xl leading-snug font-extrabold break-words">
+                      <Link
+                        href={`/jobs/${job.id}`}
+                        className="font-extrabold text-foreground no-underline after:absolute after:inset-0 group-hover:underline"
+                      >
+                        {job.title}
+                      </Link>
+                    </h3>
+                    <p className="break-words text-muted">{job.company}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
+                      <Badge tone="ink">{JOB_TYPE_LABEL[job.job_type]}</Badge>
+                      {job.location ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name="map-pin" className="size-4" />
+                          {job.location}
+                        </span>
+                      ) : null}
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="clock" className="size-4" />
+                        Posted {relativeTime(job.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </SidePanelLayout>
     </>
   );
 }

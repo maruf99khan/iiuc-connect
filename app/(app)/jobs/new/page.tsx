@@ -3,6 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { LinkButton } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState, Skeleton } from "@/components/ui/feedback";
+import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,7 +16,7 @@ export const metadata: Metadata = { title: "Post a job" };
 
 export default function NewJobPage() {
   return (
-    <Suspense fallback={<p className="text-muted">Loading…</p>}>
+    <Suspense fallback={<Skeleton className="mx-auto h-96 w-full max-w-2xl rounded-2xl" />}>
       <NewJob />
     </Suspense>
   );
@@ -33,25 +37,28 @@ async function NewJob() {
     (me.verification_status === "verified_alumni" || me.verification_status === "trusted_member");
 
   return (
-    <>
-      <h1 className="text-3xl font-bold tracking-tight text-balance">Post a job</h1>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <PageHeader
+        title="Post a job"
+        description={
+          canPost
+            ? "Verified IIUC members can read this and apply. You can have up to 10 active jobs and can close or delete a job at any time."
+            : undefined
+        }
+      />
       {canPost ? (
-        <>
-          <p className="max-w-prose leading-7 text-muted">
-            Verified IIUC members can read this and apply. You can have up to 10
-            active jobs and can close or delete a job at any time.
-          </p>
+        <Card>
           <JobForm />
-        </>
+        </Card>
       ) : (
-        <p className="max-w-prose leading-7 text-muted">
-          Only verified graduates can post jobs.{" "}
-          <Link href="/verify">Check your verification</Link>
-        </p>
+        <EmptyState
+          icon="shield-check"
+          title="Only verified graduates can post jobs."
+          description="Check your verification to see what is left to do."
+          action={<LinkButton href="/verify">Check your verification</LinkButton>}
+        />
       )}
-      <Link href="/jobs" className="self-start">
-        Back to jobs
-      </Link>
-    </>
+      <Link href="/jobs">Back to jobs</Link>
+    </div>
   );
 }

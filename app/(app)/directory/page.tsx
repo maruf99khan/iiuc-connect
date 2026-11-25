@@ -3,21 +3,42 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { LinkButton } from "@/components/ui/button";
+import { Alert, EmptyState, Skeleton } from "@/components/ui/feedback";
+import { Pagination } from "@/components/ui/nav";
+import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/session";
-import { memberLine, workLine } from "@/lib/directory/format";
 import { PAGE_SIZE, parsePage, parseWho } from "@/lib/directory/query";
 import { createClient } from "@/lib/supabase/server";
 import { isVerified } from "@/lib/verification/status";
 
+import { MemberCard } from "./member-card";
+
 export const metadata: Metadata = { title: "Member directory" };
+
+const DESCRIPTION = "Verified IIUC students and graduates who have chosen to be listed.";
 
 export default function DirectoryPage({
   searchParams,
 }: PageProps<"/directory">) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading the directory…</p>}>
+    <Suspense fallback={<DirectorySkeleton />}>
       <Directory searchParams={searchParams} />
     </Suspense>
+  );
+}
+
+function DirectorySkeleton() {
+  return (
+    <>
+      <PageHeader title="Member directory" description={DESCRIPTION} />
+      <Skeleton className="h-12" />
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+        {Array.from({ length: 8 }, (_, i) => (
+          <Skeleton key={i} className="aspect-[10/11] rounded-tr-[2.75rem]" />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -36,18 +57,18 @@ async function Directory({
 
   if (!me || !isVerified(me.verification_status)) {
     return (
-      <>
-        <h1 className="text-3xl font-bold tracking-tight text-balance">
-          Member directory
-        </h1>
-        <p className="max-w-prose leading-7 text-muted">
-          The directory is for members whose IIUC affiliation is verified, so
-          everyone in it can trust who they find.
-        </p>
-        <Link href="/verify" className="button button-primary self-start">
-          Verify my IIUC affiliation
-        </Link>
-      </>
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <PageHeader title="Member directory" />
+        <Alert tone="info" title="Verification comes first">
+          The directory is for members whose IIUC affiliation is verified, so everyone in it can
+          trust who they find.
+        </Alert>
+        <div>
+          <LinkButton href="/verify" icon="arrow-right">
+            Verify my IIUC affiliation
+          </LinkButton>
+        </div>
+      </div>
     );
   }
 
@@ -69,127 +90,121 @@ async function Directory({
   // A page past the end is an empty result, not a failure.
   const pastTheEnd = !error && page > 1 && members.length === 0;
   if (error) {
-    return (
-      <p role="alert" className="leading-7 text-danger">
-        We could not load the directory. Refresh the page to try again.
-      </p>
-    );
+    return <Alert tone="danger">We could not load the directory. Refresh the page to try again.</Alert>;
   }
 
   const total = members[0]?.total ?? 0;
   const last = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const href = (target: number) => {
+  const href = (target: number, filter: typeof who = who) => {
     const search = new URLSearchParams();
     if (q.trim()) search.set("q", q.trim());
-    if (who) search.set("who", who);
+    if (filter) search.set("who", filter);
     if (target > 1) search.set("page", String(target));
     const text = search.toString();
     return text ? `/directory?${text}` : "/directory";
   };
 
+  // Who on this page takes mentoring requests, for the marker on their tile. Row Level
+  // Security hides settings the viewer may not read; a failure only drops the marker.
+  const { data: mentors } = members.length
+    ? await supabase
+        .from("mentor_profiles")
+        .select("id")
+        .eq("accepting_requests", true)
+        .in(
+          "id",
+          members.map((m) => m.id),
+        )
+    : { data: null };
+  const mentoring = new Set((mentors ?? []).map((m) => m.id));
+
+  const pills = [
+    { label: "Students and graduates", filter: null },
+    { label: "Graduates", filter: "alumni" as const },
+    { label: "Students", filter: "student" as const },
+  ];
+
   return (
     <>
-      <div className="flex flex-col gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-balance">
-          Member directory
-        </h1>
-        <p className="max-w-prose leading-7 text-muted">
-          Verified IIUC students and graduates who have chosen to be listed.
-          Search by name, department, batch, skill, company or city.
-        </p>
-      </div>
+      <PageHeader title="Member directory" description={DESCRIPTION} />
 
-      <form
-        action="/directory"
-        method="get"
-        role="search"
-        className="flex flex-col gap-3"
-      >
-        <label htmlFor="directory-q" className="text-sm font-medium">
-          Search
-        </label>
-        <input
-          id="directory-q"
-          name="q"
-          type="search"
-          defaultValue={q}
-          maxLength={200}
-          autoComplete="off"
-          placeholder="For example: python cse 45"
-          className="field"
-        />
-        <div className="flex gap-3">
-          <label htmlFor="directory-who" className="sr-only">
-            Show
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end">
+        <form action="/directory" method="get" role="search" className="flex flex-1 items-end gap-3">
+          {who ? <input type="hidden" name="who" value={who} /> : null}
+          <label htmlFor="directory-q" className="sr-only">
+            Search
           </label>
-          <select
-            id="directory-who"
-            name="who"
-            defaultValue={who ?? ""}
-            className="field flex-1"
-          >
-            <option value="">Students and graduates</option>
-            <option value="student">Students</option>
-            <option value="alumni">Graduates</option>
-          </select>
+          <input
+            id="directory-q"
+            name="q"
+            type="search"
+            defaultValue={q}
+            maxLength={200}
+            autoComplete="off"
+            placeholder="Name, skill, company or batch"
+            className="field-line flex-1"
+          />
           <button type="submit" className="button button-primary">
             Search
           </button>
-        </div>
-      </form>
-
-      <p role="status" className="text-sm text-muted">
-        {pastTheEnd
-          ? "There is no page " + page + " of these results."
-          : total === 0
-            ? "No members match. Try fewer or different words."
-            : `${total} ${total === 1 ? "member" : "members"}${
-                last > 1 ? `, page ${page} of ${last}` : ""
+        </form>
+        <nav aria-label="Show" className="flex flex-wrap gap-2">
+          {pills.map((p) => (
+            <Link
+              key={p.label}
+              href={href(1, p.filter)}
+              aria-current={who === p.filter ? "true" : undefined}
+              className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-bold no-underline ${
+                who === p.filter
+                  ? "border-navy bg-navy text-white"
+                  : "border-ink/40 text-ink hover:bg-ink/8"
               }`}
-      </p>
-      {pastTheEnd ? (
-        <Link href={href(1)} className="self-start">
-          Go to the first page
-        </Link>
-      ) : null}
-
-      {members && members.length > 0 ? (
-        <ul className="flex flex-col divide-y divide-border border-y border-border">
-          {members.map((member) => (
-            <li key={member.id} className="flex flex-col gap-1 py-5">
-              <h2 className="text-lg font-semibold break-words">
-                <Link href={`/members/${member.id}`}>{member.full_name}</Link>
-              </h2>
-              <p className="text-sm text-muted">{memberLine(member)}</p>
-              {member.headline ? (
-                <p className="break-words">{member.headline}</p>
-              ) : null}
-              {workLine(member) ? (
-                <p className="text-sm text-muted">{workLine(member)}</p>
-              ) : null}
-              {member.skills.length > 0 ? (
-                <p className="text-sm text-muted">
-                  {member.skills.slice(0, 6).join(", ")}
-                </p>
-              ) : null}
-            </li>
+            >
+              {p.label}
+            </Link>
           ))}
-        </ul>
-      ) : null}
-
-      {last > 1 ? (
-        <nav
-          aria-label="Pages"
-          className="flex items-center justify-between gap-4"
-        >
-          {page > 1 ? (
-            <Link href={href(page - 1)}>Previous page</Link>
-          ) : (
-            <span />
-          )}
-          {page < last ? <Link href={href(page + 1)}>Next page</Link> : <span />}
         </nav>
-      ) : null}
+      </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p role="status" className="text-sm font-semibold text-muted">
+            {pastTheEnd
+              ? "There is no page " + page + " of these results."
+              : total === 0
+                ? "No members match. Try fewer or different words."
+                : `${total} ${total === 1 ? "member" : "members"}${
+                    last > 1 ? `, page ${page} of ${last}` : ""
+                  }`}
+          </p>
+          {pastTheEnd ? <Link href={href(1)}>Go to the first page</Link> : null}
+        </div>
+
+        {members && members.length > 0 ? (
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+            {members.map((member) => (
+              <MemberCard key={member.id} member={member} mentoring={mentoring.has(member.id)} />
+            ))}
+          </ul>
+        ) : pastTheEnd ? null : (
+          <EmptyState
+            icon="users"
+            title="Nobody found"
+            description="Try fewer words, or a skill or company instead of a name."
+            action={
+              <LinkButton href="/directory" variant="quiet">
+                Clear the search
+              </LinkButton>
+            }
+          />
+        )}
+
+        <Pagination
+          page={page}
+          pageCount={last}
+          hrefFor={href}
+          previousLabel="Previous page"
+          nextLabel="Next page"
+        />
     </>
   );
 }

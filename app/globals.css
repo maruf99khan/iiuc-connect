@@ -1,31 +1,48 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens (D-031). Palette from the IIUC crest: green ribbon (brand), maroon (accent),
+ * navy (ink). Every text/background pair is checked by `python scripts/contrast.py`, which holds
+ * the same hex values: change them there first, then here.
+ */
 :root {
   --background: #ffffff;
   --foreground: #14201a;
-  --surface: #f5f8f6;
-  --border: #d5e0d9;
+  --surface: #f6f8f7;
+  --surface-2: #eef2f0;
+  --border: #dde5e0;
   --muted: #4a5a51;
   --brand: #0f5132;
-  /* Field outlines need 3:1 against the page (WCAG 1.4.11); hairlines do not. */
-  --field-border: #76887e;
   --brand-strong: #0b3d26;
   --on-brand: #ffffff;
+  --accent: #7f0218;
+  --ink: #0f0165;
   --danger: #b42318;
+  --warn: #8a5a00;
+  /* Field outlines need 3:1 against the page (WCAG 1.4.11); hairlines do not. */
+  --field-border: #76887e;
+  --shadow-card: 0 1px 2px rgb(16 24 20 / 0.05), 0 4px 14px rgb(16 24 20 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(16 24 20 / 0.06), 0 14px 32px rgb(16 24 20 / 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0b120e;
+    --background: #0a0f0c;
     --foreground: #e8f0eb;
-    --surface: #131d17;
+    --surface: #111a15;
+    --surface-2: #18241d;
     --border: #25352c;
     --muted: #a9b9b0;
     --brand: #6fcf97;
-    --field-border: #5f7669;
     --brand-strong: #8fdcae;
-    --on-brand: #0b120e;
+    --on-brand: #0a0f0c;
+    --accent: #ff8a9b;
+    --ink: #c9c4ff;
     --danger: #ffa198;
+    --warn: #f2c36b;
+    --field-border: #5f7669;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 14px rgb(0 0 0 / 0.3);
+    --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.4), 0 14px 32px rgb(0 0 0 / 0.5);
   }
 }
 
@@ -33,20 +50,33 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
   --color-on-brand: var(--on-brand);
+  --color-accent: var(--accent);
+  --color-ink: var(--ink);
   --color-danger: var(--danger);
-  /* System fonts: no font download, which matters on slow mobile data. */
+  --color-warn: var(--warn);
+  /* The crest's navy, constant in both themes: for photo overlays and bands that stay dark. */
+  --color-navy: #0f0165;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --shadow-card: var(--shadow-card);
+  --shadow-lift: var(--shadow-lift);
+  /* Web font first (self-hosted by next/font); system fonts, including Bangla, as fallback. */
   --font-sans:
-    system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue",
-    Arial, sans-serif;
+    var(--font-jakarta), system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans", "Noto Sans Bengali", "Nirmala UI", "Helvetica Neue", Arial,
+    sans-serif;
 }
 
 body {
   font-family: var(--font-sans);
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
 }
 
 /* The parts of the page the browser draws, themed from the palette. */
@@ -65,8 +95,21 @@ textarea {
   caret-color: var(--brand);
 }
 
+/* Scrollbars and form controls the browser draws follow the theme too. */
+html {
+  scrollbar-color: var(--field-border) transparent;
+  accent-color: var(--brand);
+}
+
 @layer base {
-  /* Links inside running text. Buttons and the wordmark opt out below. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  /* Links inside running text. Buttons, nav and cards opt out with no-underline. */
   a {
     color: var(--brand);
     font-weight: 500;
@@ -83,19 +126,27 @@ textarea {
 @layer components {
   .wordmark {
     color: var(--foreground);
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    font-size: 1.0625rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     text-decoration-line: none;
   }
 
   /* 3rem tall: comfortably above the 44px minimum touch target. */
   .button {
-    @apply inline-flex min-h-12 items-center justify-center rounded-xl px-5 text-base font-semibold no-underline transition-colors;
+    @apply inline-flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl px-5 text-base font-semibold no-underline transition-[background-color,box-shadow,transform] duration-150;
+  }
+
+  .button:active:not(:disabled) {
+    transform: translateY(1px);
   }
 
   .button:disabled {
     @apply cursor-not-allowed opacity-60;
+  }
+
+  .button-lg {
+    @apply min-h-14 px-7 text-lg;
   }
 
   .button-primary {
@@ -106,13 +157,62 @@ textarea {
     @apply border border-border bg-background text-foreground hover:bg-surface;
   }
 
+  .button-ghost {
+    @apply bg-transparent text-foreground hover:bg-surface-2;
+  }
+
   /* 16px text stops iOS Safari zooming the page when a field is focused. */
   .field {
-    @apply block min-h-12 w-full rounded-xl bg-background px-4 text-base text-foreground;
+    @apply block min-h-12 w-full rounded-xl bg-background px-4 text-base text-foreground transition-colors duration-150;
     border: 1px solid var(--field-border);
+  }
+
+  .field:focus {
+    border-color: var(--brand);
   }
 
   .field[aria-invalid="true"] {
     @apply border-danger;
+  }
+
+  /* The editorial search line (D-032): an ink rule instead of a box. */
+  .field-line {
+    @apply block min-h-12 w-full rounded-none bg-transparent px-0 text-lg text-foreground;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .field-line:focus {
+    border-color: var(--accent);
+  }
+
+  .skeleton {
+    @apply rounded-xl bg-surface-2;
+    background-image: linear-gradient(
+      100deg,
+      transparent 30%,
+      color-mix(in srgb, var(--background) 55%, transparent) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s linear infinite;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

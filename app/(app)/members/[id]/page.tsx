@@ -4,10 +4,14 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
 
+import { Portrait } from "@/components/ui/avatar";
+import { Badge, Chip } from "@/components/ui/badge";
+import { Alert, Skeleton } from "@/components/ui/feedback";
+import { Icon } from "@/components/ui/icons";
 import { getCurrentUser } from "@/lib/auth/session";
 import { memberLine, workLine } from "@/lib/directory/format";
 import { isGithubUrl, isLinkedInUrl, isPortfolioUrl } from "@/lib/profile/schema";
-import { formatDhaka } from "@/lib/mentorship/time";
+import { bookableAfter, formatDhaka } from "@/lib/mentorship/time";
 import { createClient } from "@/lib/supabase/server";
 import { isVerified } from "@/lib/verification/status";
 
@@ -17,9 +21,22 @@ export const metadata: Metadata = { title: "Member" };
 
 export default function MemberPage({ params }: PageProps<"/members/[id]">) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading…</p>}>
+    <Suspense fallback={<MemberSkeleton />}>
       <Member params={params} />
     </Suspense>
+  );
+}
+
+function MemberSkeleton() {
+  return (
+    <div className="grid gap-10 lg:grid-cols-[20rem_minmax(0,1fr)]">
+      <Skeleton className="aspect-[10/11] max-w-56 rounded-tr-[2.75rem] lg:max-w-none" />
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-14 w-3/4" />
+        <Skeleton className="h-6 w-1/2" />
+        <Skeleton className="h-40" />
+      </div>
+    </div>
   );
 }
 
@@ -71,6 +88,8 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
       ? member.portfolio_url
       : null;
   const work = workLine(member);
+  const name = member.full_name || "Name not given";
+  const alumni = member.affiliation === "alumni";
 
   // A graduate's mentor settings and open times, for another verified member to
   // request. Row Level Security already hides a private mentor's slots.
@@ -88,124 +107,135 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
         .select("id, starts_at")
         .eq("mentor_id", id)
         .eq("status", "open")
-        .gt("starts_at", new Date().toISOString())
+        .gt("starts_at", bookableAfter())
         .order("starts_at")
         .limit(40)
     : { data: null };
 
+  const links = [
+    linkedin && { href: linkedin, text: "LinkedIn profile (opens in a new tab)" },
+    github && { href: github, text: "GitHub profile (opens in a new tab)" },
+    portfolio && { href: portfolio, text: "Portfolio or personal site (opens in a new tab)" },
+  ].filter((l): l is { href: string; text: string } => Boolean(l));
+
   return (
-    <>
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-balance break-words">
-          {member.full_name || "Name not given"}
-        </h1>
-        {verified ? (
-          <p className="text-muted">{memberLine(member)}</p>
-        ) : (
-          <p className="text-muted">Affiliation not verified yet</p>
-        )}
-        {work ? <p className="text-muted">{work}</p> : null}
-        {member.industry ? (
-          <p className="text-sm text-muted">{member.industry}</p>
+    <div className="grid items-start gap-x-12 gap-y-8 lg:grid-cols-[20rem_minmax(0,1fr)]">
+      <Portrait id={member.id} name={name} className="max-w-56 lg:max-w-none" />
+
+      <div className="flex flex-col gap-8 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        {own ? (
+          <Alert tone="info">
+            This is how other members see your profile. <Link href="/profile">Edit it</Link>
+          </Alert>
         ) : null}
+
+        <header className="flex flex-col gap-3">
+          <h1 className="text-4xl leading-[1.05] font-extrabold break-words text-ink sm:text-6xl">
+            {name}
+          </h1>
+          {member.headline ? <p className="text-xl break-words">{member.headline}</p> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {verified ? (
+              <>
+                <Badge tone={alumni ? "accent" : "ink"}>{alumni ? "Alumni" : "Student"}</Badge>
+                <Badge tone="brand" icon="shield-check">
+                  Verified
+                </Badge>
+                <p className="text-muted">{memberLine(member)}</p>
+              </>
+            ) : (
+              <p className="text-muted">Affiliation not verified yet</p>
+            )}
+          </div>
+          {work ? (
+            <p className="flex items-center gap-2 text-muted">
+              <Icon name="building" className="size-4" />
+              <span className="break-words">{work}</span>
+            </p>
+          ) : null}
+          {member.industry ? <p className="text-sm text-muted">{member.industry}</p> : null}
+        </header>
+
+        {member.bio ? (
+          <section aria-labelledby="about-heading" className="flex flex-col gap-3 border-t border-border pt-6">
+            <h2 id="about-heading" className="text-2xl font-extrabold">
+              About
+            </h2>
+            <p className="max-w-prose text-lg break-words whitespace-pre-line">{member.bio}</p>
+          </section>
+        ) : null}
+
+        {member.skills.length > 0 ? (
+          <section aria-labelledby="skills-heading" className="flex flex-col gap-4 border-t border-border pt-6">
+            <h2 id="skills-heading" className="text-2xl font-extrabold">
+              Skills
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {member.skills.map((skill) => (
+                <li key={skill}>
+                  <Chip>{skill}</Chip>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {links.length > 0 ? (
+          <section aria-labelledby="links-heading" className="flex flex-col gap-2 border-t border-border pt-6">
+            <h2 id="links-heading" className="text-2xl font-extrabold">
+              Links
+            </h2>
+            <ul className="flex flex-col gap-1">
+              {links.map((l) => (
+                <li key={l.href}>
+                  <a
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    className="inline-flex min-h-11 items-center gap-2"
+                  >
+                    <Icon name="link" className="size-4" />
+                    {l.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          {own && member.affiliation === "alumni" ? <Link href="/sessions">Manage your sessions</Link> : null}
+          <Link href="/directory">Back to the directory</Link>
+        </div>
       </div>
 
-      {own ? (
-        <p
-          role="note"
-          className="rounded-xl border border-border bg-surface px-4 py-3 text-sm leading-6"
-        >
-          This is how other members see your profile.{" "}
-          <Link href="/profile">Edit it</Link>
-        </p>
-      ) : null}
-
-      {member.headline ? (
-        <p className="text-lg leading-7 break-words">{member.headline}</p>
-      ) : null}
-
-      {member.bio ? (
-        <section
-          aria-labelledby="about-heading"
-          className="flex flex-col gap-2"
-        >
-          <h2 id="about-heading" className="text-lg font-semibold">
-            About
-          </h2>
-          <p className="max-w-prose leading-7 break-words whitespace-pre-line">
-            {member.bio}
-          </p>
-        </section>
-      ) : null}
-
-      {member.skills.length > 0 ? (
-        <section
-          aria-labelledby="skills-heading"
-          className="flex flex-col gap-3"
-        >
-          <h2 id="skills-heading" className="text-lg font-semibold">
-            Skills
-          </h2>
-          <ul className="flex flex-wrap gap-2">
-            {member.skills.map((skill) => (
-              <li
-                key={skill}
-                className="rounded-full border border-border px-3 py-1 text-sm break-words"
-              >
-                {skill}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {linkedin || github || portfolio ? (
-        <ul className="flex flex-col gap-2">
-          {linkedin ? (
-            <li>
-              <a href={linkedin} target="_blank" rel="noopener noreferrer nofollow">
-                LinkedIn profile (opens in a new tab)
-              </a>
-            </li>
-          ) : null}
-          {github ? (
-            <li>
-              <a href={github} target="_blank" rel="noopener noreferrer nofollow">
-                GitHub profile (opens in a new tab)
-              </a>
-            </li>
-          ) : null}
-          {portfolio ? (
-            <li>
-              <a href={portfolio} target="_blank" rel="noopener noreferrer nofollow">
-                Portfolio or personal site (opens in a new tab)
-              </a>
-            </li>
-          ) : null}
-        </ul>
-      ) : null}
-
       {mentor ? (
-        <section aria-labelledby="request-heading" className="flex flex-col gap-4">
-          <h2 id="request-heading" className="text-lg font-semibold">
+        <section
+          aria-labelledby="request-heading"
+          className="rounded-md rounded-tr-[2.75rem] bg-navy p-6 text-white lg:col-start-1 lg:row-start-2"
+        >
+          <h2 id="request-heading" className="text-2xl font-extrabold">
             Request a session
           </h2>
           {!mentor.accepting_requests ? (
-            <p className="text-muted">This graduate is not taking requests right now.</p>
+            <p className="mt-2 text-white/85">This graduate is not taking requests right now.</p>
           ) : slots && slots.length > 0 ? (
             <>
-              <p className="text-sm text-muted">
+              <p className="mt-2 text-sm text-white/85">
                 All times are Bangladesh time. The graduate has 72 hours to answer.
               </p>
-              <ul className="flex flex-col divide-y divide-border border-y border-border">
+              <ul className="mt-4 flex flex-col gap-3">
                 {slots.map((slot) => (
-                  <li key={slot.id} className="flex flex-col gap-3 py-4">
-                    <p className="font-semibold">{formatDhaka(slot.starts_at)}</p>
-                    <details className="flex flex-col gap-3">
-                      <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">
+                  <li key={slot.id} className="rounded-xl bg-white/10 p-3">
+                    <p className="flex items-center gap-2 font-bold">
+                      <Icon name="clock" className="size-4" />
+                      {formatDhaka(slot.starts_at)}
+                    </p>
+                    <details className="mt-1">
+                      <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold underline underline-offset-4">
                         Request this time
                       </summary>
-                      <div className="pt-3">
+                      <div className="mt-2 rounded-xl bg-background p-4 text-foreground">
                         <RequestForm slotId={slot.id} />
                       </div>
                     </details>
@@ -214,20 +244,10 @@ async function Member({ params }: Pick<PageProps<"/members/[id]">, "params">) {
               </ul>
             </>
           ) : (
-            <p className="text-muted">No open times right now. Check again soon.</p>
+            <p className="mt-2 text-white/85">No open times right now. Check again soon.</p>
           )}
         </section>
       ) : null}
-
-      {own && member.affiliation === "alumni" ? (
-        <Link href="/sessions" className="self-start">
-          Manage your sessions
-        </Link>
-      ) : null}
-
-      <Link href="/directory" className="self-start">
-        Back to the directory
-      </Link>
-    </>
+    </div>
   );
 }

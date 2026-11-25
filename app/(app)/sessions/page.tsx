@@ -3,6 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { Alert, Skeleton } from "@/components/ui/feedback";
+import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/session";
 import { WEEKDAYS } from "@/lib/mentorship/schemas";
 import { formatDhaka } from "@/lib/mentorship/time";
@@ -43,9 +45,23 @@ const STATUS_TEXT: Record<string, string> = {
   no_show: "No-show",
 };
 
+const STATUS_TONE: Record<string, string> = {
+  pending: "bg-warn/15 text-warn",
+  accepted: "bg-brand/10 text-brand",
+  scheduled: "bg-brand/10 text-brand",
+  completed: "bg-brand/10 text-brand",
+  declined: "bg-danger/10 text-danger",
+  no_show: "bg-danger/10 text-danger",
+};
+
+/** A status pill; the same tones as the shared Badge, keyed by request or session status. */
 function Badge({ status }: { status: string }) {
   return (
-    <span className="self-start rounded-full border border-border px-2 py-0.5 text-xs">
+    <span
+      className={`inline-flex items-center self-start rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+        STATUS_TONE[status] ?? "bg-surface-2 text-foreground"
+      }`}
+    >
       {STATUS_TEXT[status] ?? status}
     </span>
   );
@@ -77,7 +93,7 @@ function MeetingLink({ url }: { url: string }) {
 
 export default function SessionsPage({ searchParams }: PageProps<"/sessions">) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading your sessions…</p>}>
+    <Suspense fallback={<Skeleton className="mx-auto h-96 w-full max-w-3xl rounded-2xl" />}>
       <Sessions searchParams={searchParams} />
     </Suspense>
   );
@@ -160,34 +176,16 @@ async function Sessions({
   const problem = params.problem !== undefined;
 
   return (
-    <>
-      <div className="flex flex-col gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-balance">Sessions</h1>
-        <p className="max-w-prose leading-7 text-muted">
-          Short one-to-one sessions of 15, 20 or 30 minutes with a verified IIUC
-          graduate. You ask for a time, the graduate accepts or declines. All
-          times are Bangladesh time.
-        </p>
-      </div>
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
+      <PageHeader
+        title="Sessions"
+        description="Short one-to-one sessions of 15, 20 or 30 minutes with a verified IIUC graduate. You ask for a time, the graduate accepts or declines. All times are Bangladesh time."
+      />
 
-      {notice ? (
-        <p
-          role="status"
-          className="rounded-xl border border-border bg-surface px-4 py-3 text-sm leading-6"
-        >
-          {notice}
-        </p>
-      ) : null}
-      {problem ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-border bg-surface px-4 py-3 text-sm leading-6 text-danger"
-        >
-          That did not work. Reload the page and try again.
-        </p>
-      ) : null}
+      {notice ? <Alert tone="success">{notice}</Alert> : null}
+      {problem ? <Alert tone="danger">That did not work. Reload the page and try again.</Alert> : null}
 
-      <section aria-labelledby="mine-heading" className="flex flex-col gap-4">
+      <section aria-labelledby="mine-heading" className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-5 sm:p-6">
         <h2 id="mine-heading" className="text-xl font-semibold">
           Your requests
         </h2>
@@ -211,7 +209,7 @@ async function Sessions({
             )}
           </p>
         ) : (
-          <ul className="flex flex-col divide-y divide-border border-y border-border">
+          <ul className="flex flex-col divide-y divide-border">
             {asMentee.map((r) => (
               <li key={r.id} className="flex flex-col gap-2 py-5">
                 <p className="font-semibold">
@@ -249,7 +247,7 @@ async function Sessions({
         )}
       </section>
 
-      <section aria-labelledby="sessions-heading" className="flex flex-col gap-4">
+      <section aria-labelledby="sessions-heading" className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-5 sm:p-6">
         <h2 id="sessions-heading" className="text-xl font-semibold">
           Your sessions
         </h2>
@@ -260,7 +258,7 @@ async function Sessions({
         ) : (sessions.data ?? []).length === 0 ? (
           <p className="leading-7 text-muted">Accepted requests become sessions here.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-border border-y border-border">
+          <ul className="flex flex-col divide-y divide-border">
             {(sessions.data ?? []).map((s) => {
               const request = byId.get(s.request_id);
               const iAmMentor = s.mentor_id === user.id;
@@ -328,14 +326,14 @@ async function Sessions({
       </section>
 
       {isMentor || asMentor.length > 0 ? (
-        <section aria-labelledby="incoming-heading" className="flex flex-col gap-4">
+        <section aria-labelledby="incoming-heading" className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-5 sm:p-6">
           <h2 id="incoming-heading" className="text-xl font-semibold">
             Requests to you
           </h2>
           {live.length === 0 ? (
             <p className="leading-7 text-muted">No requests waiting.</p>
           ) : (
-            <ul className="flex flex-col divide-y divide-border border-y border-border">
+            <ul className="flex flex-col divide-y divide-border">
               {live.map((r) => (
                 <li key={r.id} className="flex flex-col gap-2 py-5">
                   <p className="font-semibold">
@@ -368,12 +366,12 @@ async function Sessions({
         </section>
       ) : null}
 
-      <section aria-labelledby="mentor-heading" className="flex flex-col gap-4">
+      {/* Only verified graduates can mentor, so nobody else is shown the section. */}
+      {isMentor ? (
+      <section aria-labelledby="mentor-heading" className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-5 sm:p-6">
         <h2 id="mentor-heading" className="text-xl font-semibold">
           Mentor settings
         </h2>
-        {isMentor ? (
-          <>
             {mentor.error ? (
               <p role="alert" className="text-danger">
                 {LOAD_ERROR}
@@ -391,7 +389,7 @@ async function Sessions({
                 You have no weekly windows. Add one so members can request you.
               </p>
             ) : (
-              <ul className="flex flex-col divide-y divide-border border-y border-border">
+              <ul className="flex flex-col divide-y divide-border">
                 {(rules.data ?? []).map((rule) => (
                   <li
                     key={rule.id}
@@ -413,13 +411,8 @@ async function Sessions({
             )}
             <h3 className="text-lg font-semibold">Add a window</h3>
             <RuleForm />
-          </>
-        ) : (
-          <p className="max-w-prose leading-7 text-muted">
-            Verified graduates can offer sessions here.
-          </p>
-        )}
       </section>
-    </>
+      ) : null}
+    </div>
   );
 }
