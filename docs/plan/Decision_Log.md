@@ -319,3 +319,15 @@ Alternatives considered: Keep a branch per sprint (a moving address for testers,
 Trade-offs accepted: A broken push now reaches the tester's address, so the checks must be run first and CI watched. No pre-merge review by a second person (the supervisor and Minhajul can still review the repository). The old rule "do not merge to main without the user saying so" is replaced by the user's instruction of 25 Nov.
 Source: CLAUDE.md "Mechanics"; Vercel's documentation on production and preview deployments; the owner's decision in chat on 25 Nov 2026.
 Status: Accepted by the owner on 25 Nov ("do whats best practice"). The merge itself is recorded in Build_State and the journal.
+
+---
+
+Decision #: D-028
+Date: 2026-11-25
+Module: Hosting
+Decision: Run the Vercel server functions in Singapore (`sin1`) by adding `vercel.json` with `"regions": ["sin1"]`, next to the Supabase project (Singapore, D-016), instead of Vercel's default US East (`iad1`).
+Rationale: The app's pages query Supabase from the server, so the distance between the function and the database is paid on every query. Measured with a throwaway route on two previews of the same code (15 samples per region, no sign-in): median round trip 799 ms from `iad1` against 37 ms from `sin1`, about 21 times lower. Singapore is also closer to users in Bangladesh than Virginia is.
+Alternatives considered: Leave the default and accept roughly 0.8 s per query (a signed-in page that waits for several queries in turn would pay it each time); move the Supabase project to the US (the data and the users are in Bangladesh, and the project holds data and policies that would have to be recreated); a second region as well (not on the free plan).
+Trade-offs accepted: Visitors outside Asia get slower pages, which does not matter for an IIUC audience. A free plan allows one function region, so this ties the hosting to the database region; moving the database later means changing this file too. The page-level saving is smaller than 21 times because pages also render and ship JavaScript, and it has not been measured on a signed-in page (that needs a signed-in browser session).
+Source: `docs/evidence/2026-11-25_performance_checks.txt`; Vercel documentation on function regions.
+Status: Accepted and applied on 25 Nov (commit ae0db18). The live address was checked from outside after the deploy (see the evidence file).

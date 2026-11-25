@@ -42,9 +42,33 @@ Not measured
   - Search latency and load testing (planned: query timing in the database, k6).
   - A real phone on a real mobile network.
 
-A finding to follow up (a hypothesis, not yet measured)
+A finding to follow up (a hypothesis when written; measured the same afternoon, see the next section)
   - Vercel served this request from region iad1 (US East; response header x-vercel-id), while the
     Supabase project is in Singapore (Build_State). Every server-side query from a signed-in page
     therefore crosses the world, which would add a round trip per query. Moving the functions to
     Singapore (sin1) is a one-line vercel.json "regions" setting. Measure a signed-in page before
     and after to find out whether it matters.
+
+Region comparison (same day, about 13:05 Bangladesh time; decision D-028)
+  Method   A throwaway route, /api/latency (never merged), timed five consecutive HTTPS round trips
+           from the Vercel function to the Supabase REST endpoint (the project's public key, one
+           trivial query). Two preview deployments of the same code: one in Vercel's default region
+           (iad1), one with vercel.json {"regions": ["sin1"]}. Each route was called three times
+           through Vercel's own access link, so 15 samples per region. No sign-in was used.
+  iad1     1038 798 796 816 825 | 937 772 817 288 921 | 288 829 292 778 799   (ms)
+           median 799, range 288 to 1,038
+  sin1     459 55 110 93 28 | 55 34 34 42 32 | 37 40 28 20 34                 (ms)
+           median 37, range 20 to 459 (459 was the first connection of the first call)
+  Result   About 21 times lower per query from Singapore.
+  Also     The same route on the owner's machine in Bangladesh, run locally, took about 78 ms per
+           query after the first connection (one run), for scale.
+  Action   vercel.json {"regions": ["sin1"]} was merged to main (ae0db18). The diagnostic route and
+           both branches were deleted; the route exists only in the history of the deleted branches.
+  Verified After the production deploy of ae0db18 a function route on https://iiuc-connect.vercel.app
+           answered with x-vercel-id "bom1::sin1::..." in two requests: edge in Mumbai, function in
+           Singapore.
+  Limits   One hour of one afternoon, one trivial query, one calling location (Vercel's access
+           tool). A page issues several queries, some in parallel, and also renders and ships
+           JavaScript, so a page's saving is smaller than 21 times; no signed-in page was measured
+           before or after, because that needs a signed-in browser session. Repeat on another day
+           before quoting the figures in the report.

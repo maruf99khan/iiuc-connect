@@ -30,7 +30,7 @@ Accounts, verification, the member directory and the mentorship request flow are
 | 23–25 Nov | Mentorship end to end | Core done 24 Nov (rebuilt to the plan, D-018 to D-020); reminders and `.ics` not built |
 | 26 Nov | Jobs | Done 24 Nov: post, apply, shortlist or reject, withdraw, close, delete (D-022). No editing, search or notifications. 25 Nov: CV per application, profile link and portfolio and GitHub fields added (D-025) |
 | 27 Nov | Notifications, reminders, events | In-app notifications done 24 Nov (D-023). Email, reminders and events not started; they need the app's email sender |
-| 28 Nov | PWA, performance, security pass | Security headers done. Installable manifest and icons done 24 Nov, no service worker (D-024). First performance measurement 25 Nov (sign-in page only, one run each: LCP 1.6 s Slow 4G, 4.9 s Slow 3G; Lighthouse 100/100/100); signed-in pages and repeat runs still to do |
+| 28 Nov | PWA, performance, security pass | Security headers done. Installable manifest and icons done 24 Nov, no service worker (D-024). First performance measurement 25 Nov (sign-in page only, one run each: LCP 1.6 s Slow 4G, 4.9 s Slow 3G; Lighthouse 100/100/100); functions moved to Singapore next to the database 25 Nov (D-028): median query round trip 799 ms to 37 ms; signed-in pages and repeat runs still to do |
 | 29 Nov | Feature freeze, full test run, evaluation scripts | |
 | 30 Nov – 2 Dec | UAT with 10 participants | Participants not found yet |
 
