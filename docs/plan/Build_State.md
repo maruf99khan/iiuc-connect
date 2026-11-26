@@ -1,10 +1,10 @@
 # IIUC Connect — Build State
 
-Updated: 2026-11-26 · Feature freeze: 29 Nov 2026 · Pre-defense: 5 December 2026 · Days to freeze: 3
+Updated: 2026-11-27 · Feature freeze: 29 Nov 2026 · Pre-defense: 5 December 2026 · Days to freeze: 2
 
 ## Today's position
 
-Accounts, verification, directory, mentorship, jobs, in-app notifications, and a full frontend redesign are merged to `main`. The redesign (D-031, D-032) landed at `b95a687` on 26 Nov with logic fixes for profile view, sign-up link, landing redirect, bookable-slot timing, dashboard mentor filter, and student sessions. Work happens on `main`, which Vercel deploys to `iiuc-connect.vercel.app`. Email notifications, reminders and the calendar file still need the app's email sender (a Vercel environment setting). The Supabase auth email sender (Gmail SMTP) works.
+Accounts, verification, directory, mentorship, jobs, in-app notifications, and a full frontend redesign are merged to `main`. The redesign (D-031, D-032) landed at `b95a687` on 26 Nov with logic fixes for profile view, sign-up link, landing redirect, bookable-slot timing, dashboard mentor filter, and student sessions. Work happens on `main`, which Vercel deploys to `iiuc-connect.vercel.app`. Email notifications are wired (D-033, 27 Nov): a cron at `/api/cron/send-notifications` fires every 5 minutes via Vercel Cron, reads un-emailed notification rows with the service-role key, and sends via Resend's REST API. It needs `RESEND_API_KEY` and `NOTIFICATIONS_FROM` on Vercel to activate (see `.env.example`). Reminders and the calendar file are not built. The Supabase auth email sender (Gmail SMTP) works.
 
 ## Key identifiers
 
@@ -29,7 +29,7 @@ Accounts, verification, directory, mentorship, jobs, in-app notifications, and a
 | 21–22 Nov | Directory, search, filters; identity tests | Done. The search was a plain substring match until 25 Nov, which did not match thesis claim 3; rebuilt to the claimed design (weighted, ranked, typo-tolerant) and measured, D-029 |
 | 23–25 Nov | Mentorship end to end | Core done 24 Nov (rebuilt to the plan, D-018 to D-020); reminders and `.ics` not built |
 | 26 Nov | Frontend redesign | Done 26 Nov: full page rebuild (D-031) with IIUC crest colours, Plus Jakarta Sans, shared component library, app shell; design direction C, editorial portraits (D-032). Logic fixes: profile view, sign-up link, landing redirect, bookable-slot timing, dashboard mentor filter, student sessions. E2e not re-confirmed after redesign. |
-| 27 Nov | Notifications, reminders, events | In-app notifications done 24 Nov (D-023). Email, reminders and events not started; they need the app's email sender |
+| 27 Nov | Notifications, reminders, events | In-app notifications done 24 Nov (D-023). Email notifications done 27 Nov (D-033): Resend via raw fetch, cron every 5 min, `emailed_at` column, vercel.json updated. Needs `RESEND_API_KEY` + `NOTIFICATIONS_FROM` on Vercel. Reminders and `.ics` not built. |
 | 28 Nov | PWA, performance, security pass | Security headers done. Installable manifest and icons done 24 Nov, no service worker (D-024). Performance measured 25 Nov (D-028): signed-in LCP 1.8 s Slow 4G / 5.2 s Slow 3G on a local production build; not re-measured after D-031/D-032 and not yet on the live site |
 | 29 Nov | Feature freeze, full test run, evaluation scripts | |
 | 30 Nov – 2 Dec | UAT with 10 participants | Participants not found yet |
@@ -39,7 +39,7 @@ Accounts, verification, directory, mentorship, jobs, in-app notifications, and a
 - Database: identity, verification (state machine, append-only audit), directory, and mentorship (`mentor_profiles`, `mentor_availability_rules`, `mentor_slots`, `mentorship_requests`, `sessions`, `session_feedback`), with RLS, triggers, and pg_cron jobs for expiry and nightly slot generation.
 - App: sign-up and sign-in, password reset, onboarding, verification submit and admin review, profiles with privacy, directory with search and filters, mentorship screens at `/sessions` and `/members/[id]`. Full frontend redesign (D-031, D-032): IIUC crest palette (green `#0f5132`, maroon `#7f0218`, navy `#0f0165`), Plus Jakarta Sans, shared `components/ui` and `components/shell`, app shell with top bar (desktop) and bottom tab bar (mobile), editorial portrait layout across all pages.
 - Jobs board: `jobs` and `job_applications` with RLS, limits and status moves; screens at `/jobs`, `/jobs/new`, `/jobs/[id]`. Applications can carry an optional PDF CV (private bucket, applicant and poster only, admins excluded) and the poster can open the applicant's profile, which can list GitHub and portfolio addresses (D-025).
-- In-app notifications: trigger-made rows for mentorship and job events, owner-only read, `/notifications` and an unread count in the nav.
+- In-app notifications: trigger-made rows for mentorship and job events, owner-only read, `/notifications` and an unread count in the nav. Email notifications wired (D-033): Vercel Cron at `/api/cron/send-notifications` queries un-emailed rows and calls Resend. Activated once `RESEND_API_KEY` and `NOTIFICATIONS_FROM` are set on Vercel.
 - Tests: 382 pgTAP assertions across eight files (all nine files have run in CI, including 009, 35 assertions), 286 unit tests (13 fewer than before: the tests of the substring helpers D-029 deleted), `e2e/*.py` Playwright scripts including `mentorship.py` (25 checks), `jobs.py` (44), `notifications.py` (17) and `search.py` (20). `e2e/directory.py` predates D-029 and has not been re-run (it needs its own empty world).
 - Demo data: `supabase/demo/demo_data.sql` fills a test database with six members, two mentors with open slots, five jobs and an application; `demo_cleanup.sql` removes it all. The hosted development database currently holds the demo data and two real test accounts (a verified student and an admin), to be deleted after testing.
 - Report records: `docs/plan/Requirements.md` (requirement IDs mapped to tests, seeded 25 Nov, not yet checked line by line) and the Master File's new section 14, "Amendments since v2.1".
@@ -68,7 +68,8 @@ Accounts, verification, directory, mentorship, jobs, in-app notifications, and a
 - [x] The two email templates (Confirm signup, Reset password) now link to the app's own pages, with a designed layout. Done 24 Nov.
 - [ ] Production address is now known: `https://iiuc-connect.vercel.app`. In Supabase Authentication → URL Configuration set the Site URL to it and keep `/auth/confirm` and `/auth/reset` redirect URLs for it (and for `http://localhost:3000`). Until then confirmation emails link to localhost and testers cannot finish signing up.
 - [ ] Vercel → project Settings → Deployment Protection → Vercel Authentication: switch off, so testers can open the address without a Vercel login (a free database with dummy data, so the owner accepted the exposure on 25 Nov).
-- [ ] `SUPABASE_SECRET_KEY` and `CRON_SECRET` on Vercel, and the daily `vercel.json` cron for `/api/cron/purge-evidence`.
+- [ ] `SUPABASE_SECRET_KEY` and `CRON_SECRET` on Vercel. `vercel.json` now registers both cron jobs (purge-evidence daily, send-notifications every 5 min); they fire once the env vars are set.
+- [ ] `RESEND_API_KEY` and `NOTIFICATIONS_FROM` on Vercel (see `.env.example`). Sign up at resend.com (free tier); verify a sender domain or use `onboarding@resend.dev` for internal testing only.
 - [x] First admin on the development database made 24 Nov with the README's SQL; approval of a real student claim was tried by hand and worked. Repeat on any other database.
 - [ ] Delete leftover synthetic images in the verification storage bucket, if any, and the two test CV files in the `application-cvs` bucket (dashboard → Storage), or let the purge do it once the keys are set.
 - [ ] Turn on leaked-password protection (Authentication, password security). The security advisor flags it; it is an Auth setting, not code.

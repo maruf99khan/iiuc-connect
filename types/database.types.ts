@@ -109,41 +109,6 @@ export type Database = {
           },
         ]
       }
-      notifications: {
-        Row: {
-          created_at: string
-          id: string
-          kind: Database["public"]["Enums"]["notification_kind"]
-          link: string
-          read_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          kind: Database["public"]["Enums"]["notification_kind"]
-          link: string
-          read_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          kind?: Database["public"]["Enums"]["notification_kind"]
-          link?: string
-          read_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       mentor_availability_rules: {
         Row: {
           created_at: string
@@ -319,6 +284,169 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          emailed_at: string | null
+          id: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          link: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emailed_at?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          link: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emailed_at?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["notification_kind"]
+          link?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_private: {
+        Row: {
+          created_at: string
+          institutional_email: string | null
+          personal_email: string | null
+          phone: string | null
+          student_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          institutional_email?: string | null
+          personal_email?: string | null
+          phone?: string | null
+          student_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          institutional_email?: string | null
+          personal_email?: string | null
+          phone?: string | null
+          student_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_private_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          affiliation: Database["public"]["Enums"]["affiliation"] | null
+          avatar_path: string | null
+          batch: string | null
+          bio: string | null
+          company: string | null
+          created_at: string
+          department: string | null
+          full_name: string
+          github_url: string | null
+          graduation_year: number | null
+          headline: string | null
+          id: string
+          industry: string | null
+          job_title: string | null
+          linkedin_url: string | null
+          location: string | null
+          onboarded_at: string | null
+          portfolio_url: string | null
+          reputation_score: number
+          role: Database["public"]["Enums"]["user_role"]
+          search_text: string
+          search_vector: unknown
+          skills: string[]
+          updated_at: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          visibility: Database["public"]["Enums"]["profile_visibility"]
+        }
+        Insert: {
+          affiliation?: Database["public"]["Enums"]["affiliation"] | null
+          avatar_path?: string | null
+          batch?: string | null
+          bio?: string | null
+          company?: string | null
+          created_at?: string
+          department?: string | null
+          full_name?: string
+          github_url?: string | null
+          graduation_year?: number | null
+          headline?: string | null
+          id: string
+          industry?: string | null
+          job_title?: string | null
+          linkedin_url?: string | null
+          location?: string | null
+          onboarded_at?: string | null
+          portfolio_url?: string | null
+          reputation_score?: number
+          role?: Database["public"]["Enums"]["user_role"]
+          search_text?: string
+          search_vector: unknown
+          skills?: string[]
+          updated_at?: string
+          verification_status?: Database["public"]["Enums"]["verification_status"]
+          visibility?: Database["public"]["Enums"]["profile_visibility"]
+        }
+        Update: {
+          affiliation?: Database["public"]["Enums"]["affiliation"] | null
+          avatar_path?: string | null
+          batch?: string | null
+          bio?: string | null
+          company?: string | null
+          created_at?: string
+          department?: string | null
+          full_name?: string
+          github_url?: string | null
+          graduation_year?: number | null
+          headline?: string | null
+          id?: string
+          industry?: string | null
+          job_title?: string | null
+          linkedin_url?: string | null
+          location?: string | null
+          onboarded_at?: string | null
+          portfolio_url?: string | null
+          reputation_score?: number
+          role?: Database["public"]["Enums"]["user_role"]
+          search_text?: string
+          search_vector?: unknown
+          skills?: string[]
+          updated_at?: string
+          verification_status?: Database["public"]["Enums"]["verification_status"]
+          visibility?: Database["public"]["Enums"]["profile_visibility"]
+        }
+        Relationships: []
+      }
       session_feedback: {
         Row: {
           comment: string | null
@@ -431,131 +559,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      profile_private: {
-        Row: {
-          created_at: string
-          institutional_email: string | null
-          personal_email: string | null
-          phone: string | null
-          student_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          institutional_email?: string | null
-          personal_email?: string | null
-          phone?: string | null
-          student_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          institutional_email?: string | null
-          personal_email?: string | null
-          phone?: string | null
-          student_id?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profile_private_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profiles: {
-        Row: {
-          affiliation: Database["public"]["Enums"]["affiliation"] | null
-          avatar_path: string | null
-          batch: string | null
-          bio: string | null
-          company: string | null
-          created_at: string
-          department: string | null
-          full_name: string
-          github_url: string | null
-          graduation_year: number | null
-          headline: string | null
-          id: string
-          industry: string | null
-          job_title: string | null
-          linkedin_url: string | null
-          location: string | null
-          onboarded_at: string | null
-          portfolio_url: string | null
-          reputation_score: number
-          role: Database["public"]["Enums"]["user_role"]
-          search_text: string
-          search_vector: string
-          skills: string[]
-          updated_at: string
-          verification_status: Database["public"]["Enums"]["verification_status"]
-          visibility: Database["public"]["Enums"]["profile_visibility"]
-        }
-        Insert: {
-          affiliation?: Database["public"]["Enums"]["affiliation"] | null
-          avatar_path?: string | null
-          batch?: string | null
-          bio?: string | null
-          company?: string | null
-          created_at?: string
-          department?: string | null
-          full_name?: string
-          github_url?: string | null
-          graduation_year?: number | null
-          headline?: string | null
-          id: string
-          industry?: string | null
-          job_title?: string | null
-          linkedin_url?: string | null
-          location?: string | null
-          onboarded_at?: string | null
-          portfolio_url?: string | null
-          reputation_score?: number
-          role?: Database["public"]["Enums"]["user_role"]
-          search_text?: string
-          search_vector?: string
-          skills?: string[]
-          updated_at?: string
-          verification_status?: Database["public"]["Enums"]["verification_status"]
-          visibility?: Database["public"]["Enums"]["profile_visibility"]
-        }
-        Update: {
-          affiliation?: Database["public"]["Enums"]["affiliation"] | null
-          avatar_path?: string | null
-          batch?: string | null
-          bio?: string | null
-          company?: string | null
-          created_at?: string
-          department?: string | null
-          full_name?: string
-          github_url?: string | null
-          graduation_year?: number | null
-          headline?: string | null
-          id?: string
-          industry?: string | null
-          job_title?: string | null
-          linkedin_url?: string | null
-          location?: string | null
-          onboarded_at?: string | null
-          portfolio_url?: string | null
-          reputation_score?: number
-          role?: Database["public"]["Enums"]["user_role"]
-          search_text?: string
-          search_vector?: string
-          skills?: string[]
-          updated_at?: string
-          verification_status?: Database["public"]["Enums"]["verification_status"]
-          visibility?: Database["public"]["Enums"]["profile_visibility"]
-        }
-        Relationships: []
       }
       verification_documents: {
         Row: {
@@ -748,16 +751,16 @@ export type Database = {
           p_who?: Database["public"]["Enums"]["affiliation"]
         }
         Returns: {
-          affiliation: Database["public"]["Enums"]["affiliation"] | null
-          batch: string | null
-          company: string | null
-          department: string | null
+          affiliation: Database["public"]["Enums"]["affiliation"]
+          batch: string
+          company: string
+          department: string
           full_name: string
-          graduation_year: number | null
-          headline: string | null
+          graduation_year: number
+          headline: string
           id: string
-          job_title: string | null
-          location: string | null
+          job_title: string
+          location: string
           rank: number
           skills: string[]
           total: number

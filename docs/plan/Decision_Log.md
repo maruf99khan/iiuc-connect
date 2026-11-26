@@ -378,4 +378,15 @@ Rationale: The owner judged the browse-grid layout still basic next to dunite.ap
 Alternatives considered: A, campus banner (closest to the existing layout, lowest risk; recommended to the owner); B, navy sidebar portal; keeping the D-031 browse grid with its filter rail.
 Trade-offs accepted: Fewer people fit on one screen; the large initials depend on names alone (no photos). The filter rail of D-031 is gone. The dashboard now runs more read-only queries (search, jobs, mentor count, open slots, mentor profiles), all under Row Level Security; signed-in speed has not been re-measured.
 Source: `docs/design/previews/redesign-previews.html`; owner's choice on 26 Nov ("c").
-Status: Accepted and built on branch `redesign/frontend`; not merged.
+Status: Accepted and merged to `main` at `b95a687` on 26 Nov.
+
+---
+
+Decision #: D-033
+Date: 2026-11-27
+Module: Notifications
+Decision: Implement email notifications with a Vercel Cron route (`/api/cron/send-notifications`, every 5 min) using raw `fetch` to Resend's REST API — no new npm dependency. The route queries `public.notifications` for rows where `emailed_at IS NULL` and `created_at` is within the last 24 hours, fetches recipient emails from `auth.users` via the service-role key, calls Resend, and sets `emailed_at` on success. The 9 message texts reuse the same strings as `lib/notifications/text.ts`.
+Rationale: DB triggers create notification rows but cannot call external APIs. Options were (a) hook into every Server Action, (b) a Supabase Edge Function, or (c) a Next.js cron. Option (c) is the least invasive: it uses infrastructure already in place (cron, service key, the same CRON_SECRET guard), and the 5-minute delivery lag is acceptable. Free tier (Resend: 100 emails/day, 3 000/month) covers thesis-scale usage.
+Alternatives considered: Hooking email sends directly into Server Actions (requires spreading email logic across every mutation path, and misses events triggered by DB-side jobs like slot expiry); Supabase Edge Function (requires a separate Deno environment and deploy step).
+Trade-offs accepted: Up to 5-minute email delay. Emails are skipped for events older than 24 hours if the cron was down. `listUsers()` fetches a single page of 50 users — sufficient for thesis scale; would need pagination at higher membership.
+Status: Accepted. Needs `RESEND_API_KEY` and `NOTIFICATIONS_FROM` on Vercel to activate.

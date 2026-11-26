@@ -18,7 +18,7 @@ import {
   isVerified,
 } from "@/lib/verification/status";
 
-import { MemberCard } from "../directory/member-card";
+import { MemberCard, type Member } from "../directory/member-card";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -164,7 +164,7 @@ async function AccountStatus() {
   const available = (free ?? []).filter(
     (m) => m.visibility !== "private" && isVerified(m.verification_status),
   );
-  const shown = available.length > 0 ? available : (people.data ?? []);
+  const shown: Member[] = available.length > 0 ? (available as Member[]) : (people.data ?? []);
 
   const counts = [
     // The search leaves out the viewer, hence "other".
