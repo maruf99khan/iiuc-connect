@@ -1,10 +1,10 @@
 # IIUC Connect — Build State
 
-Updated: 2026-11-25 · Feature freeze: 29 Nov 2026 · Pre-defense: 5 December 2026 · Days to freeze: 4
+Updated: 2026-11-26 · Feature freeze: 29 Nov 2026 · Pre-defense: 5 December 2026 · Days to freeze: 3
 
 ## Today's position
 
-Accounts, verification, the member directory and the mentorship request flow are built and checked on Claude's side. Everything was merged into `main` on 25 Nov 2026 with a merge commit (`9586ec8`, 45 commits kept, CI green on the head `05059f6`; D-027). Work now happens on `main`, which Vercel deploys to `iiuc-connect.vercel.app`. The old `sprint-*` branches remain on GitHub as history. The jobs board and in-app notifications were built the same day, ahead of plan. Email notifications, reminders and the calendar file are next and need the app's own email sender. The Supabase auth email sender (Gmail SMTP) now works.
+Accounts, verification, directory, mentorship, jobs, in-app notifications, and a full frontend redesign are merged to `main`. The redesign (D-031, D-032) landed at `b95a687` on 26 Nov with logic fixes for profile view, sign-up link, landing redirect, bookable-slot timing, dashboard mentor filter, and student sessions. Work happens on `main`, which Vercel deploys to `iiuc-connect.vercel.app`. Email notifications, reminders and the calendar file still need the app's email sender (a Vercel environment setting). The Supabase auth email sender (Gmail SMTP) works.
 
 ## Key identifiers
 
@@ -28,16 +28,16 @@ Accounts, verification, the member directory and the mentorship request flow are
 | 20 Nov | Admin queue, profile view and edit, privacy | Done |
 | 21–22 Nov | Directory, search, filters; identity tests | Done. The search was a plain substring match until 25 Nov, which did not match thesis claim 3; rebuilt to the claimed design (weighted, ranked, typo-tolerant) and measured, D-029 |
 | 23–25 Nov | Mentorship end to end | Core done 24 Nov (rebuilt to the plan, D-018 to D-020); reminders and `.ics` not built |
-| 26 Nov | Jobs | Done 24 Nov: post, apply, shortlist or reject, withdraw, close, delete (D-022). No editing, search or notifications. 25 Nov: CV per application, profile link and portfolio and GitHub fields added (D-025) |
+| 26 Nov | Frontend redesign | Done 26 Nov: full page rebuild (D-031) with IIUC crest colours, Plus Jakarta Sans, shared component library, app shell; design direction C, editorial portraits (D-032). Logic fixes: profile view, sign-up link, landing redirect, bookable-slot timing, dashboard mentor filter, student sessions. E2e not re-confirmed after redesign. |
 | 27 Nov | Notifications, reminders, events | In-app notifications done 24 Nov (D-023). Email, reminders and events not started; they need the app's email sender |
-| 28 Nov | PWA, performance, security pass | Security headers done. Installable manifest and icons done 24 Nov, no service worker (D-024). First performance measurement 25 Nov (sign-in page only, one run each: LCP 1.6 s Slow 4G, 4.9 s Slow 3G; Lighthouse 100/100/100); functions moved to Singapore next to the database 25 Nov (D-028): median query round trip 799 ms to 37 ms; signed-in pages measured the same evening on a local production build, 5 runs each: LCP 1.8 s Slow 4G and 5.2 s Slow 3G on all five pages, CLS 0 (`docs/evidence/2026-11-25_signed_in_performance.txt`); not yet on the live site or a real phone |
+| 28 Nov | PWA, performance, security pass | Security headers done. Installable manifest and icons done 24 Nov, no service worker (D-024). Performance measured 25 Nov (D-028): signed-in LCP 1.8 s Slow 4G / 5.2 s Slow 3G on a local production build; not re-measured after D-031/D-032 and not yet on the live site |
 | 29 Nov | Feature freeze, full test run, evaluation scripts | |
 | 30 Nov – 2 Dec | UAT with 10 participants | Participants not found yet |
 
 ## What exists now
 
 - Database: identity, verification (state machine, append-only audit), directory, and mentorship (`mentor_profiles`, `mentor_availability_rules`, `mentor_slots`, `mentorship_requests`, `sessions`, `session_feedback`), with RLS, triggers, and pg_cron jobs for expiry and nightly slot generation.
-- App: sign-up and sign-in, password reset, onboarding, verification submit and admin review, profiles with privacy, directory with search and filters, mentorship screens at `/sessions` and `/members/[id]`.
+- App: sign-up and sign-in, password reset, onboarding, verification submit and admin review, profiles with privacy, directory with search and filters, mentorship screens at `/sessions` and `/members/[id]`. Full frontend redesign (D-031, D-032): IIUC crest palette (green `#0f5132`, maroon `#7f0218`, navy `#0f0165`), Plus Jakarta Sans, shared `components/ui` and `components/shell`, app shell with top bar (desktop) and bottom tab bar (mobile), editorial portrait layout across all pages.
 - Jobs board: `jobs` and `job_applications` with RLS, limits and status moves; screens at `/jobs`, `/jobs/new`, `/jobs/[id]`. Applications can carry an optional PDF CV (private bucket, applicant and poster only, admins excluded) and the poster can open the applicant's profile, which can list GitHub and portfolio addresses (D-025).
 - In-app notifications: trigger-made rows for mentorship and job events, owner-only read, `/notifications` and an unread count in the nav.
 - Tests: 382 pgTAP assertions across eight files (all nine files have run in CI, including 009, 35 assertions), 286 unit tests (13 fewer than before: the tests of the substring helpers D-029 deleted), `e2e/*.py` Playwright scripts including `mentorship.py` (25 checks), `jobs.py` (44), `notifications.py` (17) and `search.py` (20). `e2e/directory.py` predates D-029 and has not been re-run (it needs its own empty world).
@@ -50,11 +50,11 @@ Accounts, verification, the member directory and the mentorship request flow are
 
 000. **Drafted 25 Nov (D-030, Proposed):** the user-test kit in `docs/uat/` (script, task cards, observer sheet, SUS, consent form, results sheet, `sus_score.py` with a passing self-check). Waits on the supervisor for consent wording and any ethics sign-off, and on recruiting 10 participants. Nobody has done the tasks yet.
 
-00. **Done 25 Nov (D-029), on `main` once pushed:** the directory search rebuilt to thesis claim 3 (weighted, ranked, typo-tolerant), measured and browser-checked. Evidence: `docs/evidence/2026-11-25_search_checks.txt`. Not proven: `e2e/directory.py` against the new search, relevance by real users (UAT).
+00. **Done 26 Nov (D-031, D-032), merged to `main` at `b95a687`:** full frontend redesign and logic fixes. E2e suite not re-confirmed against the new UI; `e2e/auth.py` was the last run interrupted.
 
-0. **Done 25 Nov (D-025), merged to `main`, CI green:** an optional PDF CV per job application, a profile link for the poster, and portfolio and GitHub profile fields. Evidence: `docs/evidence/2026-11-25_job_cv_checks.txt`. Not proven: the cleanup route deleting a real file (needs the service key and cron secret). Email notifications and the performance measurement move after the freeze.
+0. **Done 25 Nov (D-029/D-025), on `main`:** directory search rebuilt (weighted, ranked, typo-tolerant); PDF CVs per job application; portfolio and GitHub fields. Not proven: `e2e/directory.py` against the new search; cleanup route deleting a real CV file (needs the service key and cron secret).
 
-1. CI is green on the merged head, so pgTAP files 001 to 008 and every migration have run from scratch in CI. From now on: tests first, lint, typecheck and unit tests before every push to `main`, and read the CI result after it (a broken push reaches the testers).
+1. CI is green on `b95a687`. From now on: lint, typecheck and unit tests before every push to `main`, and read the CI result after (a broken push reaches the testers).
 2. PWA, performance and security pass (28 Nov). Email notifications and reminders once the app's server has the Gmail sender (a Vercel environment setting).
 3. Negative control for `005_mentorship.test.sql` (a deliberately broken policy must fail it).
 4. Citation audit of the v1 bibliography → `Bibliography.md`. Known wrong: A5 (Farrow and Yuan), M3 (Lall, Chen and Mason). Suspect: R2, A2, M1, M2. Trace problem-statement statistics to primary sources.
